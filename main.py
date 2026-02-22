@@ -1,0 +1,154 @@
+"""
+Phase 1 validation: exact polynomial f(x)=(x-2)^9 and cross-form comparison.
+Phase 2 validation: condition numbers and statistics.
+Run for n in {3, 5, 10} and dtype in {float64, float32}.
+"""
+
+import numpy as np
+
+from interpolation import meshes, barycentric_form1, barycentric_form2, newton, ordering
+from conditioning import condition_numbers, statistics
+
+
+def exact_polynomial(x):
+    """f(x) = (x - 2)^9 (degree 9, exact in double/single)."""
+    return (x - 2.0) ** 9
+
+
+def run_validation(a=1.0, b=3.0, n=10, grid_size=200, dtype=np.float64):
+    """
+    Build meshes, setup all forms, evaluate on fine grid, compare to f and to each other.
+    Returns dict of max errors (vs f and between forms).
+    """
+    x_grid = np.linspace(a, b, grid_size, dtype=dtype)
+    f_ref = exact_polynomial(x_grid)
+
+    # Uniform mesh
+    x_unif = meshes.uniform_mesh(a, b, n, dtype)
+    gamma, y_b1 = barycentric_form1.setup_barycentric1(x_unif, exact_polynomial, dtype)
+    p_b1_unif = barycentric_form1.barycentric1_eval(x_grid, x_unif, gamma, y_b1, dtype)
+
+    x_b2_unif, beta_unif, y_b2_unif = barycentric_form2.setup_barycentric2(
+        "uniform", a, b, n, exact_polynomial, dtype
+    )
+    p_b2_unif = barycentric_form2.barycentric2_eval(
+        x_grid, x_b2_unif, beta_unif, y_b2_unif, dtype
+    )
+
+    x_newt_inc = ordering.order_mesh(x_unif, "increasing")
+    coeffs_inc, _ = newton.divided_differences(x_newt_inc, exact_polynomial, dtype)
+    p_newt_inc = newton.newton_eval(x_grid, x_newt_inc, coeffs_inc, dtype)
+
+    x_newt_leja = ordering.order_mesh(x_unif, "leja")
+    coeffs_leja, _ = newton.divided_differences(x_newt_leja, exact_polynomial, dtype)
+    p_newt_leja = newton.newton_eval(x_grid, x_newt_leja, coeffs_leja, dtype)
+
+    errors = {
+        "vs_f": {
+            "bary1_unif": np.max(np.abs(p_b1_unif - f_ref)),
+            "bary2_unif": np.max(np.abs(p_b2_unif - f_ref)),
+            "newton_inc": np.max(np.abs(p_newt_inc - f_ref)),
+            "newt_leja": np.max(np.abs(p_newt_leja - f_ref)),
+        },
+        "cross_form_unif": {
+            "b1_vs_b2": np.max(np.abs(p_b1_unif - p_b2_unif)),
+            "b1_vs_newt_inc": np.max(np.abs(p_b1_unif - p_newt_inc)),
+            "b1_vs_newt_leja": np.max(np.abs(p_b1_unif - p_newt_leja)),
+        },
+    }
+
+    # Cheb1 mesh (same checks)
+    x_cheb1 = meshes.chebyshev_first_kind(a, b, n, dtype)
+    gamma_c, y_c = barycentric_form1.setup_barycentric1(
+        x_cheb1, exact_polynomial, dtype
+    )
+    p_b1_cheb1 = barycentric_form1.barycentric1_eval(
+        x_grid, x_cheb1, gamma_c, y_c, dtype
+    )
+    x_b2_c, beta_c, y_b2_c = barycentric_form2.setup_barycentric2(
+        "cheb1", a, b, n, exact_polynomial, dtype
+    )
+    p_b2_cheb1 = barycentric_form2.barycentric2_eval(
+        x_grid, x_b2_c, beta_c, y_b2_c, dtype
+    )
+    errors["vs_f"]["bary1_cheb1"] = np.max(np.abs(p_b1_cheb1 - f_ref))
+    errors["vs_f"]["bary2_cheb1"] = np.max(np.abs(p_b2_cheb1 - f_ref))
+    errors["cross_form_cheb1"] = {
+        "b1_vs_b2": np.max(np.abs(p_b1_cheb1 - p_b2_cheb1)),
+    }
+
+    return errors
+
+
+def main():
+    print("Phase 1 validation: f(x) = (x-2)^9, interval [1,3], grid size 200\n")
+    for dtype in (np.float64, np.float32):
+        name = "float64" if dtype == np.float64 else "float32"
+        eps = np.finfo(dtype).eps
+        print(f"--- dtype = {name} (eps ≈ {eps:.2e}) ---")
+        for n in (3, 5, 10):
+            err = run_validation(a=1.0, b=3.0, n=n, grid_size=200, dtype=dtype)
+            print(f"  n = {n}:")
+            if n >= 10:
+                for k, v in err["vs_f"].items():
+                    print(f"    max|p - f| {k}: {v:.4e}")
+            for k, v in err["cross_form_unif"].items():
+                print(f"    max|p1 - p2| {k}: {v:.4e}")
+            for k, v in err["cross_form_cheb1"].items():
+                print(f"    max|p1 - p2| {k}: {v:.4e}")
+            if n < 10:
+                u, c = err["cross_form_unif"], err["cross_form_cheb1"]
+                ok = u["b1_vs_b2"] < 10 * eps and c["b1_vs_b2"] < 10 * eps
+                print(f"    cross-form ok: {ok}")
+        print()
+    print("Phase 1 validation done.")
+
+
+def run_phase2_validation(a=1.0, b=3.0, n=5, grid_size=200, dtype=np.float64):
+    """
+    Phase 2: compute kappa_xy, kappa_x1 on a grid; Lambda_n, Hn; sanity checks.
+    """
+    x_grid = np.linspace(a, b, grid_size, dtype=dtype)
+    x_nodes = meshes.uniform_mesh(a, b, n, dtype)
+    gamma, y = barycentric_form1.setup_barycentric1(x_nodes, exact_polynomial, dtype)
+
+    k_xy = condition_numbers.kappa_xy(x_grid, x_nodes, gamma, y, dtype)
+    k_x1 = condition_numbers.kappa_x1(x_grid, x_nodes, gamma, dtype)
+
+    Lambda_n = statistics.lebesgue_constant(k_x1)
+    Hn_val = statistics.Hn(k_xy)
+
+    # Sanity: kappa_x1 >= 1 (Lebesgue function bounded below by 1)
+    k_x1_fin = k_x1[np.isfinite(k_x1)]
+    ok_x1_ge_1 = np.all(k_x1_fin >= 1.0 - 1e-10) if k_x1_fin.size else True
+    # At nodes, kappa_x1 = 1 (spot-check: eval at nodes)
+    at_nodes = condition_numbers.kappa_x1(x_nodes, x_nodes, gamma, dtype)
+    ok_nodes_one = np.allclose(at_nodes, 1.0)
+    # kappa_xy positive where finite
+    k_xy_fin = k_xy[np.isfinite(k_xy)]
+    ok_xy_pos = np.all(k_xy_fin >= 0) if k_xy_fin.size else True
+    # Lambda_n finite and >= 1
+    ok_Lambda = np.isfinite(Lambda_n) and Lambda_n >= 1.0
+
+    return {
+        "Lambda_n": Lambda_n,
+        "Hn": Hn_val,
+        "kappa_x1_min": np.nanmin(k_x1) if np.any(np.isfinite(k_x1)) else np.nan,
+        "kappa_x1_at_nodes": at_nodes,
+        "ok_x1_ge_1": ok_x1_ge_1,
+        "ok_nodes_one": ok_nodes_one,
+        "ok_xy_pos": ok_xy_pos,
+        "ok_Lambda": ok_Lambda,
+    }
+
+
+if __name__ == "__main__":
+    main()
+    print("\n--- Phase 2 validation ---")
+    for dtype in (np.float64, np.float32):
+        name = "float64" if dtype == np.float64 else "float32"
+        res = run_phase2_validation(a=1.0, b=3.0, n=5, grid_size=200, dtype=dtype)
+        print(f"dtype={name}: Lambda_n={res['Lambda_n']:.6f}, Hn={res['Hn']:.6f}")
+        print(f"  kappa_x1 min={res['kappa_x1_min']:.6f}, at nodes ~1: {res['ok_nodes_one']}")
+        print(f"  sanity: x1>=1 {res['ok_x1_ge_1']}, xy>=0 {res['ok_xy_pos']}, Lambda ok {res['ok_Lambda']}")
+    print("Phase 2 validation done.")
