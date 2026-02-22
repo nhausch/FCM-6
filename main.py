@@ -1,10 +1,8 @@
 """
-Phase 1 validation: exact polynomial f(x)=(x-2)^9 and cross-form comparison.
-Phase 2 validation: condition numbers and statistics.
-Phase 3 validation: precision, forward error, stability ratio, compare_to_bound.
-Run for n in {3, 5, 10} and dtype in {float64, float32}.
+Phase 1–3 validation (default). Task mode: python main.py --task 2 [--precision single] [--plot] ...
 """
 
+import argparse
 import numpy as np
 
 from interpolation import meshes, barycentric_form1, barycentric_form2, newton, ordering
@@ -208,20 +206,45 @@ def run_phase3_validation(a=1.0, b=3.0, n=8, grid_size=200):
     }
 
 
-if __name__ == "__main__":
-    main()
-    print("\n--- Phase 2 validation ---")
-    for dtype in (np.float64, np.float32):
-        name = "float64" if dtype == np.float64 else "float32"
-        res = run_phase2_validation(a=1.0, b=3.0, n=5, grid_size=200, dtype=dtype)
-        print(f"dtype={name}: Lambda_n={res['Lambda_n']:.6f}, Hn={res['Hn']:.6f}")
-        print(f"  kappa_x1 min={res['kappa_x1_min']:.6f}, at nodes ~1: {res['ok_nodes_one']}")
-        print(f"  sanity: x1>=1 {res['ok_x1_ge_1']}, xy>=0 {res['ok_xy_pos']}, Lambda ok {res['ok_Lambda']}")
-    print("Phase 2 validation done.")
+def parse_args():
+    p = argparse.ArgumentParser(description="Interpolation experiments and validations.")
+    p.add_argument("--task", type=int, default=None, metavar="N",
+                   help="Run task 2, 3, 4, or 5. If omitted, run Phase 1–3 validations.")
+    p.add_argument("--precision", type=str, default="single", choices=["single", "double"],
+                   help="Precision for approximate interpolant (default: single).")
+    p.add_argument("--plot", action="store_true", help="Produce and save plots.")
+    p.add_argument("--interval", type=float, nargs=2, default=None, metavar=("A", "B"),
+                   help="Interval [a, b]. Default from function for chosen task.")
+    p.add_argument("--degree-min", type=int, default=5, help="Min n for tasks 2–4 (default 5).")
+    p.add_argument("--degree-max", type=int, default=20, help="Max n for tasks 2–4 (default 20).")
+    p.add_argument("--n-max", type=int, default=50, help="Max n for Task 5 convergence (default 50).")
+    p.add_argument("--output-dir", type=str, default="output", help="Directory for plots (default: output).")
+    p.add_argument("--evaluation-grid-size", type=int, default=2000, help="Grid size for evaluation (default 2000).")
+    return p.parse_args()
 
-    print("\n--- Phase 3 validation ---")
-    res3 = run_phase3_validation(a=1.0, b=3.0, n=8, grid_size=200)
-    print(f"forward_error_sup (single vs double): {res3['forward_error_sup']:.4e}")
-    print(f"Lambda_n: {res3['Lambda_n']:.6f}, bound: {res3['bound']:.4e}")
-    print(f"stability_ratio: {res3['stability_ratio']:.4f}, within_bound: {res3['within_bound']}")
-    print("Phase 3 validation done.")
+
+if __name__ == "__main__":
+    args = parse_args()
+    if args.task is None:
+        main()
+        print("\n--- Phase 2 validation ---")
+        for dtype in (np.float64, np.float32):
+            name = "float64" if dtype == np.float64 else "float32"
+            res = run_phase2_validation(a=1.0, b=3.0, n=5, grid_size=200, dtype=dtype)
+            print(f"dtype={name}: Lambda_n={res['Lambda_n']:.6f}, Hn={res['Hn']:.6f}")
+            print(f"  kappa_x1 min={res['kappa_x1_min']:.6f}, at nodes ~1: {res['ok_nodes_one']}")
+            print(f"  sanity: x1>=1 {res['ok_x1_ge_1']}, xy>=0 {res['ok_xy_pos']}, Lambda ok {res['ok_Lambda']}")
+        print("Phase 2 validation done.")
+        print("\n--- Phase 3 validation ---")
+        res3 = run_phase3_validation(a=1.0, b=3.0, n=8, grid_size=200)
+        print(f"forward_error_sup (single vs double): {res3['forward_error_sup']:.4e}")
+        print(f"Lambda_n: {res3['Lambda_n']:.6f}, bound: {res3['bound']:.4e}")
+        print(f"stability_ratio: {res3['stability_ratio']:.4f}, within_bound: {res3['within_bound']}")
+        print("Phase 3 validation done.")
+    else:
+        if args.task not in (2, 3, 4, 5):
+            raise SystemExit("--task must be 2, 3, 4, or 5.")
+        if args.interval is not None:
+            args.interval = tuple(args.interval)
+        executor = __import__("task_executor", fromlist=["TaskExecutor"]).TaskExecutor()
+        executor.run(args.task, args)
