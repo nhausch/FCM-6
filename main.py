@@ -1,6 +1,7 @@
 """
 Phase 1 validation: exact polynomial f(x)=(x-2)^9 and cross-form comparison.
 Phase 2 validation: condition numbers and statistics.
+Phase 3 validation: precision, forward error, stability ratio, compare_to_bound.
 Run for n in {3, 5, 10} and dtype in {float64, float32}.
 """
 
@@ -8,6 +9,8 @@ import numpy as np
 
 from interpolation import meshes, barycentric_form1, barycentric_form2, newton, ordering
 from conditioning import condition_numbers, statistics
+from utils.precision import get_dtype, PrecisionContext
+from evaluation import error_stability
 
 
 def exact_polynomial(x):
@@ -142,6 +145,69 @@ def run_phase2_validation(a=1.0, b=3.0, n=5, grid_size=200, dtype=np.float64):
     }
 
 
+def run_phase3_validation(a=1.0, b=3.0, n=8, grid_size=200):
+    """
+    Phase 3: precision helpers, single vs double forward error, stability ratio, compare_to_bound.
+    Reference = double; approximate = single (same mesh, same f).
+    """
+    # 1. Precision
+    assert get_dtype("single") == np.float32
+    assert get_dtype("double") == np.float64
+    ctx_single = PrecisionContext("single")
+    assert ctx_single.dtype == np.float32
+    assert np.isfinite(ctx_single.eps) and ctx_single.eps > 0
+
+    # 2. Build reference (double) and approximate (single) interpolants on same mesh
+    dtype_ref = np.float64
+    dtype_approx = np.float32
+    x_grid_ref = np.linspace(a, b, grid_size, dtype=dtype_ref)
+    x_grid_approx = np.linspace(a, b, grid_size, dtype=dtype_approx)
+
+    x_nodes_ref = meshes.uniform_mesh(a, b, n, dtype_ref)
+    gamma_ref, y_ref = barycentric_form1.setup_barycentric1(
+        x_nodes_ref, exact_polynomial, dtype_ref
+    )
+    p_ref = barycentric_form1.barycentric1_eval(
+        x_grid_ref, x_nodes_ref, gamma_ref, y_ref, dtype_ref
+    )
+
+    x_nodes_approx = meshes.uniform_mesh(a, b, n, dtype_approx)
+    gamma_approx, y_approx = barycentric_form1.setup_barycentric1(
+        x_nodes_approx, exact_polynomial, dtype_approx
+    )
+    p_approx = barycentric_form1.barycentric1_eval(
+        x_grid_approx, x_nodes_approx, gamma_approx, y_approx, dtype_approx
+    )
+
+    # Forward error: compare on same grid (cast p_ref to float32 for same-length comparison, or compare in float64)
+    p_ref_on_grid = np.asarray(p_ref, dtype=dtype_approx)
+    fe_sup = error_stability.forward_error_sup(p_approx, p_ref_on_grid)
+    assert np.isfinite(fe_sup) and fe_sup >= 0
+
+    # 3. Lambda_n in double (reference precision for condition numbers)
+    k_x1 = condition_numbers.kappa_x1(x_grid_ref, x_nodes_ref, gamma_ref, dtype_ref)
+    Lambda_n = statistics.lebesgue_constant(k_x1)
+    eps_single = np.finfo(np.float32).eps
+
+    # Stability ratio and compare_to_bound (use single eps for "stability experiment")
+    ratio = error_stability.stability_ratio(fe_sup, Lambda_n, eps_single, y_ref=y_ref)
+    cmp_res = error_stability.compare_to_bound(
+        fe_sup, Lambda_n, eps_single, y_ref=y_ref
+    )
+    assert np.isfinite(ratio) and ratio > 0
+    assert cmp_res["forward_error_sup"] == fe_sup
+    assert cmp_res["within_bound"] == (fe_sup <= cmp_res["bound"])
+    assert abs(cmp_res["ratio"] - ratio) < 1e-10
+
+    return {
+        "forward_error_sup": fe_sup,
+        "Lambda_n": Lambda_n,
+        "stability_ratio": ratio,
+        "within_bound": cmp_res["within_bound"],
+        "bound": cmp_res["bound"],
+    }
+
+
 if __name__ == "__main__":
     main()
     print("\n--- Phase 2 validation ---")
@@ -152,3 +218,10 @@ if __name__ == "__main__":
         print(f"  kappa_x1 min={res['kappa_x1_min']:.6f}, at nodes ~1: {res['ok_nodes_one']}")
         print(f"  sanity: x1>=1 {res['ok_x1_ge_1']}, xy>=0 {res['ok_xy_pos']}, Lambda ok {res['ok_Lambda']}")
     print("Phase 2 validation done.")
+
+    print("\n--- Phase 3 validation ---")
+    res3 = run_phase3_validation(a=1.0, b=3.0, n=8, grid_size=200)
+    print(f"forward_error_sup (single vs double): {res3['forward_error_sup']:.4e}")
+    print(f"Lambda_n: {res3['Lambda_n']:.6f}, bound: {res3['bound']:.4e}")
+    print(f"stability_ratio: {res3['stability_ratio']:.4f}, within_bound: {res3['within_bound']}")
+    print("Phase 3 validation done.")

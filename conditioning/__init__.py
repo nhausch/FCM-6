@@ -1,5 +1,3 @@
-"""Conditioning package: condition numbers and statistics."""
-
 from . import condition_numbers
 from . import statistics
 

@@ -1,5 +1,3 @@
-"""Interpolation package: meshes, barycentric forms, Newton form, ordering."""
-
 from . import meshes
 from . import ordering
 from . import barycentric_form1

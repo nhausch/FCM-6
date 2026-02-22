@@ -1,9 +1,3 @@
-"""
-Condition numbers for Lagrange interpolation.
-kappa(x,n,y) = (sum_i |ell_i(x) y_i|) / |p_n(x)|
-kappa(x,n,1) = sum_i |ell_i(x)| (Lebesgue function)
-"""
-
 import numpy as np
 
 from interpolation.barycentric_form1 import (
@@ -13,12 +7,10 @@ from interpolation.barycentric_form1 import (
 )
 
 
+# Condition number kappa(x, n, y) = (sum_i |ell_i(x) y_i|) / |p_n(x)|.
+# Returns 1D array of length len(x_eval).
+# At nodes returns 1. Where |p_n(x)| is zero or tiny, returns np.nan.
 def kappa_xy(x_eval, x_nodes, gamma, y, dtype=np.float64):
-    """
-    Condition number kappa(x, n, y) = (sum_i |ell_i(x) y_i|) / |p_n(x)|.
-    Returns 1D array of length len(x_eval).
-    At nodes returns 1. Where |p_n(x)| is zero or tiny, returns np.nan.
-    """
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
     x_nodes = np.asarray(x_nodes, dtype=dtype).ravel()
     gamma = np.asarray(gamma, dtype=dtype).ravel()
@@ -45,15 +37,12 @@ def kappa_xy(x_eval, x_nodes, gamma, y, dtype=np.float64):
         out[k] = num[k] / denom[k]
     return out
 
-
+# Lebesgue function kappa(x, n, 1) = sum_i |ell_i(x)|.
+# ell_i(x) = (gamma_i/(x-x_i)) / sum_j (gamma_j/(x-x_j)), so
+# kappa_x1 = (sum_i |gamma_i/(x-x_i)|) / |sum_j gamma_j/(x-x_j)|.
+# At nodes returns 1.0.
+# Returns 1D array of length len(x_eval).
 def kappa_x1(x_eval, x_nodes, gamma, dtype=np.float64):
-    """
-    Lebesgue function kappa(x, n, 1) = sum_i |ell_i(x)|.
-    ell_i(x) = (gamma_i/(x-x_i)) / sum_j (gamma_j/(x-x_j)), so
-    kappa_x1 = (sum_i |gamma_i/(x-x_i)|) / |sum_j gamma_j/(x-x_j)|.
-    At nodes returns 1.0.
-    Returns 1D array of length len(x_eval).
-    """
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
     x_nodes = np.asarray(x_nodes, dtype=dtype).ravel()
     gamma = np.asarray(gamma, dtype=dtype).ravel()
