@@ -9,7 +9,7 @@ from . import run_experiment
 def run(args):
     a, b = args.interval if hasattr(args, "interval") and args.interval else f1.interval
     degree_min = getattr(args, "degree_min", 5)
-    degree_max = getattr(args, "degree_max", 20)
+    degree_max = getattr(args, "degree_max", 30)
     n_list = list(range(degree_min, degree_max + 1))
     config = {
         "mesh_types": ["uniform", "cheb1", "cheb2"],

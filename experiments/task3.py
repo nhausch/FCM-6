@@ -2,15 +2,17 @@
 
 import os
 
-from functions import get
+from functions.f2 import make_f2
 from . import run_experiment
 
 
 def run(args):
-    f, a_default, b_default = get(3)
+    d = getattr(args, "f2_d", 9)
+    func, _, interval, _ = make_f2(d)
+    a_default, b_default = interval[0], interval[1]
     a, b = args.interval if hasattr(args, "interval") and args.interval else (a_default, b_default)
     degree_min = getattr(args, "degree_min", 5)
-    degree_max = getattr(args, "degree_max", 20)
+    degree_max = getattr(args, "degree_max", 30)
     n_list = list(range(degree_min, degree_max + 1))
     config = {
         "mesh_types": ["uniform", "cheb1", "cheb2"],
@@ -19,7 +21,7 @@ def run(args):
         "evaluation_grid_size": getattr(args, "evaluation_grid_size", 2000),
         "precision": getattr(args, "precision", "single"),
     }
-    results = run_experiment.run_task_f(config, f, (a, b))
+    results = run_experiment.run_task_f(config, func, (a, b))
     _print_table(results)
     if getattr(args, "plot", False):
         output_dir = getattr(args, "output_dir", "output")

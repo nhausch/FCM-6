@@ -6,7 +6,6 @@ Function 2:
 import numpy as np
 
 def make_f2(d):
-
     roots = np.arange(1, d + 1, dtype=np.float64)
 
     def product_form(x):

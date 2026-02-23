@@ -1,11 +1,3 @@
-"""
-Single-experiment runner: one (mesh_type, n, f, interval, grid_size, precision).
-Returns dict with kappa_xy_max, Lambda_n, forward_error_sup, stability_ratio, within_bound, etc.
-Reference and condition numbers in double; approximate interpolant in single when precision is single.
-
-Unified entry point: run_single_experiment(f, x_nodes, degree, mesh_type, ...) for Task 4 and reuse.
-"""
-
 import numpy as np
 
 from interpolation import barycentric_form1, barycentric_form2, meshes, newton, ordering
@@ -14,7 +6,89 @@ from evaluation import error_stability
 from utils.precision import get_dtype
 
 
-def run_single_experiment(
+# Runs a single experiment for a given mesh type / meshg size.
+# Tasks 2 and 3.
+def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="single"):
+    dtype_ref = np.float64
+    dtype_approx = get_dtype(precision)
+
+    # Evaluation grid: ref in double (for condition numbers); approx in chosen precision.
+    x_grid = np.linspace(a, b, grid_size, dtype=dtype_ref)
+    x_grid_approx = np.linspace(a, b, grid_size, dtype=dtype_approx)
+
+    # Build the reference mesh and setup Form 1 for condition numbers (double precision).
+    x_nodes = meshes.build_mesh(mesh_type, a, b, n, dtype_ref)
+    gamma_ref, y_ref = barycentric_form1.setup_barycentric1(
+        x_nodes, f, dtype_ref
+    )
+    p_ref = barycentric_form1.barycentric1_eval(
+        x_grid, x_nodes, gamma_ref, y_ref, dtype_ref
+    )
+
+    # Compute the condition numbers (double precision).
+    k_xy = condition_numbers.kappa_xy(x_grid, x_nodes, gamma_ref, y_ref, dtype_ref)
+    k_x1 = condition_numbers.kappa_x1(x_grid, x_nodes, gamma_ref, dtype_ref)
+    Lambda_n = statistics.lebesgue_constant(k_x1)
+    Hn_val = statistics.Hn(k_xy)
+
+    # Compute the interpolant (single precision unless otherwise specified).
+    # Evalute the grid.
+    x_nodes_a = meshes.build_mesh(mesh_type, a, b, n, dtype_approx)
+    beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
+    p_approx = barycentric_form2.barycentric2_eval(
+        x_grid_approx, x_nodes_a, beta_a, y_a, dtype_approx
+    )
+
+    # Cast the reference interpolant to the same dtype as the approximate one so 
+    # the forward error is computed in a consistent way
+    p_ref_casted = np.asarray(p_ref, dtype=dtype_approx)
+
+    # Compute the forward error (max absolute difference).
+    fe_sup = error_stability.forward_error_sup(p_approx, p_ref_casted)
+
+    # Get the unit roundoff of the precision used for approximation.
+    eps = np.finfo(dtype_approx).eps
+
+    # Check if the forward error stayed within (condition number * precision bound).
+    cmp_res = error_stability.compare_to_bound(
+        fe_sup, Lambda_n, eps, y_ref=y_ref
+    )
+
+    # Compute the stability ratio (forward error / bound).
+    ratio = error_stability.stability_ratio(
+        fe_sup, Lambda_n, eps, y_ref=y_ref
+    )
+
+    return {
+        "kappa_xy_max": Hn_val,
+        "Lambda_n": Lambda_n,
+        "forward_error_sup": fe_sup,
+        "stability_ratio": ratio,
+        "within_bound": cmp_res["within_bound"],
+        "bound": cmp_res["bound"],
+    }
+
+# Runs the double loop over mesh_types and degree_range (n list). Return nested results.
+# Tasks 2 and 3.
+def run_task_sweep(config, f, interval, mesh_types=None):
+    a, b = interval
+    mesh_types = mesh_types or config.get("mesh_types", ["uniform", "cheb1", "cheb2"])
+    n_list = config["degree_range"]
+    grid_size = config.get("evaluation_grid_size", 2000)
+    precision = config.get("precision", "single")
+
+    results = {}
+    for mesh_type in mesh_types:
+        results[mesh_type] = {}
+        for n in n_list:
+            results[mesh_type][n] = run_experiment_with_parameters(
+                mesh_type, n, f, a, b, grid_size, precision
+            )
+    return results
+
+# Runs a single interpolation experiment with pre-built nodes.
+# Task 4.
+def run_experiment_with_nodes(
     f,
     x_nodes,
     degree,
@@ -23,52 +97,26 @@ def run_single_experiment(
     grid_size=4000,
     precision="single",
 ):
-    """
-    Run a single interpolation experiment with pre-built nodes (e.g. for f3).
-
-    Parameters
-    ----------
-    f : callable
-        Function to interpolate (e.g. from make_f3(x_nodes)).
-    x_nodes : array_like
-        Interpolation nodes.
-    degree : int
-        Degree of interpolating polynomial (len(x_nodes)-1 for canonical).
-    mesh_type : str
-        'uniform', 'cheb1', or 'cheb2' (for labeling).
-    label : str, optional
-        Identifier for plots / logs.
-    grid_size : int
-        Number of evaluation points (default 4000).
-    precision : str
-        'single' or 'double' for approximate interpolant.
-
-    Returns
-    -------
-    dict
-        Lambda_n, H_n, forward_errors (per form), stability_ratios (per form),
-        x_eval, kappa_1, kappa_xy, and per-form error vectors for plotting.
-    """
     dtype_ref = np.float64
     dtype_approx = get_dtype(precision)
     x_nodes = np.asarray(x_nodes, dtype=dtype_ref)
     n_nodes = x_nodes.size
 
-    # 1. Data preparation
+    # Prepare the data.
     f_values_double = np.asarray(f(x_nodes), dtype=dtype_ref).ravel()
     f_values_single = f_values_double.astype(np.float32)
     if f_values_double.size != n_nodes:
         raise ValueError("f(x_nodes) must return length equal to x_nodes")
 
-    # 2. Evaluation grid
+    # Create the grid.
     a, b = float(x_nodes.min()), float(x_nodes.max())
     x_eval = np.linspace(a, b, grid_size, dtype=dtype_ref)
     x_eval_approx = x_eval.astype(dtype_approx)
 
-    # 3. Reference (exact) polynomial in double
+    # Construct the reference polynomial (double precision).
     p_exact = np.asarray(f(x_eval), dtype=dtype_ref).ravel()
 
-    # 4. Single-precision interpolants
+    # Construct the interpolants (single precision).
     beta, y_single = barycentric_form2.setup_barycentric2_from_values(
         x_nodes, f_values_single, dtype_approx
     )
@@ -124,72 +172,3 @@ def run_single_experiment(
         "interpolants": interpolants,
         "label": label,
     }
-
-
-def run_experiment(mesh_type, n, f, a, b, grid_size, precision="single"):
-    dtype_ref = np.float64
-    dtype_approx = get_dtype(precision)
-
-    # Evaluation grid: ref in double (for condition numbers); approx in chosen precision.
-    x_grid = np.linspace(a, b, grid_size, dtype=dtype_ref)
-    x_grid_approx = np.linspace(a, b, grid_size, dtype=dtype_approx)
-
-    # 1. Build mesh and setup Form 1 for ref and condition numbers.
-    x_nodes = meshes.build_mesh(mesh_type, a, b, n, dtype_ref)
-    gamma_ref, y_ref = barycentric_form1.setup_barycentric1(
-        x_nodes, f, dtype_ref
-    )
-    p_ref = barycentric_form1.barycentric1_eval(
-        x_grid, x_nodes, gamma_ref, y_ref, dtype_ref
-    )
-
-    # 2. Approximate interpolant in single (or double if precision is double).
-    x_nodes_a = meshes.build_mesh(mesh_type, a, b, n, dtype_approx)
-    beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
-    p_approx = barycentric_form2.barycentric2_eval(
-        x_grid_approx, x_nodes_a, beta_a, y_a, dtype_approx
-    )
-    p_ref_same = np.asarray(p_ref, dtype=dtype_approx)
-
-    # 3. Condition numbers (double).
-    k_xy = condition_numbers.kappa_xy(x_grid, x_nodes, gamma_ref, y_ref, dtype_ref)
-    k_x1 = condition_numbers.kappa_x1(x_grid, x_nodes, gamma_ref, dtype_ref)
-    Lambda_n = statistics.lebesgue_constant(k_x1)
-    Hn_val = statistics.Hn(k_xy)
-
-    # 4. Forward error and bound comparison (use eps of approximate precision).
-    fe_sup = error_stability.forward_error_sup(p_approx, p_ref_same)
-    eps = np.finfo(dtype_approx).eps
-    cmp_res = error_stability.compare_to_bound(
-        fe_sup, Lambda_n, eps, y_ref=y_ref
-    )
-    ratio = error_stability.stability_ratio(
-        fe_sup, Lambda_n, eps, y_ref=y_ref
-    )
-
-    return {
-        "kappa_xy_max": Hn_val,
-        "Lambda_n": Lambda_n,
-        "forward_error_sup": fe_sup,
-        "stability_ratio": ratio,
-        "within_bound": cmp_res["within_bound"],
-        "bound": cmp_res["bound"],
-    }
-
-# Run the double loop over mesh_types and degree_range (n list). Return nested results.
-# config: dict with mesh_types, degree_range (list of n), interval (a,b), evaluation_grid_size, precision.
-def run_task_f(config, f, interval, mesh_types=None):
-    a, b = interval
-    mesh_types = mesh_types or config.get("mesh_types", ["uniform", "cheb1", "cheb2"])
-    n_list = config["degree_range"]
-    grid_size = config.get("evaluation_grid_size", 2000)
-    precision = config.get("precision", "single")
-
-    results = {}
-    for mesh_type in mesh_types:
-        results[mesh_type] = {}
-        for n in n_list:
-            results[mesh_type][n] = run_experiment(
-                mesh_type, n, f, a, b, grid_size, precision
-            )
-    return results

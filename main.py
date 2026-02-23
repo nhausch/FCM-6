@@ -65,6 +65,14 @@ def parse_args():
         default=2000,
         help="Grid size for evaluation (default 2000).",
     )
+    p.add_argument(
+        "--f2-d",
+        type=int,
+        default=9,
+        dest="f2_d",
+        metavar="D",
+        help="Dimension d for f2 (Task 3): f2(x) = product_{i=1}^d (x - i) (default 9).",
+    )
     return p.parse_args()
 
 
