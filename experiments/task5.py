@@ -4,7 +4,7 @@ import numpy as np
 import os
 
 from functions import f4
-from interpolation import barycentric_form2
+from interpolation import barycentric_form2, meshes
 from conditioning.statistics import sup_norm
 
 
@@ -23,9 +23,8 @@ def run(args):
     for mesh_type in mesh_types:
         errors = []
         for n in n_list:
-            x_nodes, beta, y = barycentric_form2.setup_barycentric2(
-                mesh_type, a, b, n, f4.func, np.float64
-            )
+            x_nodes = meshes.build_mesh(mesh_type, a, b, n, np.float64)
+            x_nodes, beta, y = barycentric_form2.setup_barycentric2(x_nodes, f4.func, np.float64)
             p_n = barycentric_form2.barycentric2_eval(
                 x_grid, x_nodes, beta, y, np.float64
             )

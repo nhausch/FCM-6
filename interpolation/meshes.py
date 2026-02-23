@@ -25,3 +25,14 @@ def chebyshev_second_kind(a, b, n, dtype=np.float64):
     t = np.cos(k * np.pi / (n - 1))
     x = (b - a) / 2 * t + (a + b) / 2
     return np.sort(x).astype(dtype)
+
+
+def build_mesh(mesh_type, a, b, n, dtype=np.float64):
+    """Return 1D mesh for mesh_type: 'uniform', 'cheb1', or 'cheb2'."""
+    if mesh_type == "uniform":
+        return uniform_mesh(a, b, n, dtype)
+    if mesh_type == "cheb1":
+        return chebyshev_first_kind(a, b, n, dtype)
+    if mesh_type == "cheb2":
+        return chebyshev_second_kind(a, b, n, dtype)
+    raise ValueError(f"Unknown mesh_type: {mesh_type}")

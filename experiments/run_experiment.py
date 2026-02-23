@@ -6,7 +6,7 @@ Reference and condition numbers in double; approximate interpolant in single whe
 
 import numpy as np
 
-from interpolation import barycentric_form1, barycentric_form2
+from interpolation import barycentric_form1, barycentric_form2, meshes
 from conditioning import condition_numbers, statistics
 from evaluation import error_stability
 from utils.precision import get_dtype
@@ -20,9 +20,8 @@ def run_experiment(mesh_type, n, f, a, b, grid_size, precision="single"):
     x_grid = np.linspace(a, b, grid_size, dtype=dtype_ref)
 
     # 1. Build mesh and setup Form 2 (for nodes); Form 1 for ref and condition numbers.
-    x_nodes, beta, y_b2 = barycentric_form2.setup_barycentric2(
-        mesh_type, a, b, n, f, dtype_ref
-    )
+    x_nodes = meshes.build_mesh(mesh_type, a, b, n, dtype_ref)
+    x_nodes, beta, y_b2 = barycentric_form2.setup_barycentric2(x_nodes, f, dtype_ref)
     gamma_ref, y_ref = barycentric_form1.setup_barycentric1(
         x_nodes, f, dtype_ref
     )
@@ -31,9 +30,8 @@ def run_experiment(mesh_type, n, f, a, b, grid_size, precision="single"):
     )
 
     # 2. Approximate interpolant in single (or double if precision is double).
-    x_nodes_a, beta_a, y_a = barycentric_form2.setup_barycentric2(
-        mesh_type, a, b, n, f, dtype_approx
-    )
+    x_nodes_a = meshes.build_mesh(mesh_type, a, b, n, dtype_approx)
+    x_nodes_a, beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
     p_approx = barycentric_form2.barycentric2_eval(
         x_grid, x_nodes_a, beta_a, y_a, dtype_approx
     )

@@ -5,6 +5,8 @@ Run validations: python main.py  (or python run_validations.py)
 
 import argparse
 
+from task_executor import TaskExecutor
+
 
 def parse_args():
     p = argparse.ArgumentParser(
@@ -37,13 +39,13 @@ def parse_args():
         "--degree-min",
         type=int,
         default=5,
-        help="Min n for tasks 2–4 (default 5).",
+        help="Min n for tasks 2-4 (default 5).",
     )
     p.add_argument(
         "--degree-max",
         type=int,
         default=20,
-        help="Max n for tasks 2–4 (default 20).",
+        help="Max n for tasks 2-4 (default 20).",
     )
     p.add_argument(
         "--n-max",
@@ -76,5 +78,4 @@ if __name__ == "__main__":
             raise SystemExit("--task must be 2, 3, 4, or 5.")
         if args.interval is not None:
             args.interval = tuple(args.interval)
-        from task_executor import TaskExecutor
         TaskExecutor().run(args.task, args)
