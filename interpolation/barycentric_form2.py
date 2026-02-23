@@ -13,7 +13,7 @@ def setup_barycentric2(x, f, dtype=np.float64):
     y = np.asarray(f(x), dtype=dtype).ravel()
     if y.shape[0] != x.shape[0]:
         raise ValueError("f(x) must return array of same length as x")
-    return x, beta, y
+    return beta, y
 
 # Evaluates the interpolant at x_eval using Barycentric Form 2.
 # p(x) = (sum_i beta_i*y_i/(x-x_i)) / (sum_i beta_i/(x-x_i)).

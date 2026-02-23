@@ -19,9 +19,8 @@ def run_experiment(mesh_type, n, f, a, b, grid_size, precision="single"):
     # Evaluation grid (same for ref and approx; use ref for condition numbers).
     x_grid = np.linspace(a, b, grid_size, dtype=dtype_ref)
 
-    # 1. Build mesh and setup Form 2 (for nodes); Form 1 for ref and condition numbers.
+    # 1. Build mesh and setup Form 1 for ref and condition numbers.
     x_nodes = meshes.build_mesh(mesh_type, a, b, n, dtype_ref)
-    x_nodes, beta, y_b2 = barycentric_form2.setup_barycentric2(x_nodes, f, dtype_ref)
     gamma_ref, y_ref = barycentric_form1.setup_barycentric1(
         x_nodes, f, dtype_ref
     )
@@ -31,7 +30,7 @@ def run_experiment(mesh_type, n, f, a, b, grid_size, precision="single"):
 
     # 2. Approximate interpolant in single (or double if precision is double).
     x_nodes_a = meshes.build_mesh(mesh_type, a, b, n, dtype_approx)
-    x_nodes_a, beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
+    beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
     p_approx = barycentric_form2.barycentric2_eval(
         x_grid, x_nodes_a, beta_a, y_a, dtype_approx
     )
