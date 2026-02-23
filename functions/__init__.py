@@ -1,11 +1,12 @@
-"""Test functions for interpolation tasks. get(task_id) returns (func, a, b)."""
+"""Test functions for interpolation tasks. get(task_id) returns (func, a, b). Task 4 returns (make_f3, a, b)."""
 
 from . import f1, f2, f3, f4
 
+# Task 4: f3 is mesh-dependent; get(4) returns (make_f3, a_default, b_default).
 _registry = {
     2: (f1.func, f1.interval[0], f1.interval[1]),
     3: (f2.func, f2.interval[0], f2.interval[1]),
-    4: (f3.func, f3.interval[0], f3.interval[1]),
+    4: (f3.make_f3, -1.0, 1.0),
     5: (f4.func, f4.interval[0], f4.interval[1]),
 }
 

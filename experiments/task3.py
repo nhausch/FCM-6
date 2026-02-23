@@ -1,4 +1,4 @@
-"""Task 3: f2(x) = 1/(1+x^2). Parameter sweep over mesh types and n."""
+"""Task 3: f2(x; d) = product_{i=1}^d (x - i). Parameter sweep over mesh types and n."""
 
 import os
 

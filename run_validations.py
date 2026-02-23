@@ -30,7 +30,7 @@ def run_validation(a=1.0, b=3.0, n=10, grid_size=200, dtype=np.float64):
     p_b1_unif = barycentric_form1.barycentric1_eval(x_grid, x_unif, gamma, y_b1, dtype)
 
     x_b2_unif = meshes.build_mesh("uniform", a, b, n, dtype)
-    x_b2_unif, beta_unif, y_b2_unif = barycentric_form2.setup_barycentric2(x_b2_unif, exact_polynomial, dtype)
+    beta_unif, y_b2_unif = barycentric_form2.setup_barycentric2(x_b2_unif, exact_polynomial, dtype)
     p_b2_unif = barycentric_form2.barycentric2_eval(
         x_grid, x_b2_unif, beta_unif, y_b2_unif, dtype
     )
@@ -65,7 +65,7 @@ def run_validation(a=1.0, b=3.0, n=10, grid_size=200, dtype=np.float64):
         x_grid, x_cheb1, gamma_c, y_c, dtype
     )
     x_b2_c = meshes.build_mesh("cheb1", a, b, n, dtype)
-    x_b2_c, beta_c, y_b2_c = barycentric_form2.setup_barycentric2(x_b2_c, exact_polynomial, dtype)
+    beta_c, y_b2_c = barycentric_form2.setup_barycentric2(x_b2_c, exact_polynomial, dtype)
     p_b2_cheb1 = barycentric_form2.barycentric2_eval(
         x_grid, x_b2_c, beta_c, y_b2_c, dtype
     )

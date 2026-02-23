@@ -15,6 +15,16 @@ def setup_barycentric2(x, f, dtype=np.float64):
         raise ValueError("f(x) must return array of same length as x")
     return beta, y
 
+
+# Setup Barycentric Form 2 from precomputed node values (no callable f).
+def setup_barycentric2_from_values(x_nodes, y_values, dtype=np.float64):
+    x_nodes = np.asarray(x_nodes, dtype=dtype).ravel()
+    y_values = np.asarray(y_values, dtype=dtype).ravel()
+    if y_values.shape[0] != x_nodes.shape[0]:
+        raise ValueError("y_values must have same length as x_nodes")
+    beta = compute_beta(x_nodes, dtype)
+    return beta, y_values
+
 # Evaluates the interpolant at x_eval using Barycentric Form 2.
 # p(x) = (sum_i beta_i*y_i/(x-x_i)) / (sum_i beta_i/(x-x_i)).
 # Uses exact-node and near-node safeguards.

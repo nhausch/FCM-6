@@ -14,14 +14,30 @@ def order_mesh(x, mode):
         return _leja_order(x)
     raise ValueError(f"Unknown mode: {mode}")
 
+
+# Return indices such that x[indices] is the reordered mesh.
+def order_mesh_indices(x, mode):
+    x = np.asarray(x).ravel()
+    n = x.size
+    if mode == "increasing":
+        return np.argsort(x)
+    if mode == "decreasing":
+        return np.argsort(x)[::-1]
+    if mode == "leja":
+        return _leja_order_indices(x)
+    raise ValueError(f"Unknown mode: {mode}")
+
 # Leja ordering: greedy selection maximizing product of distances to already selected.
 def _leja_order(x):
+    idx = _leja_order_indices(x)
+    return np.asarray(x).ravel()[idx].copy()
+
+
+def _leja_order_indices(x):
     x = np.asarray(x).ravel()
     n = x.size
     if n <= 1:
-        return x.copy()
-
-    # First point: argmax |x_i|
+        return np.arange(n)
     idx = np.argmax(np.abs(x))
     selected = [idx]
     remaining = list(range(n))
@@ -37,4 +53,4 @@ def _leja_order(x):
                 best_j = j
         selected.append(best_j)
         remaining.remove(best_j)
-    return x[selected].copy()
+    return np.array(selected)

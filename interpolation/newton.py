@@ -20,6 +20,22 @@ def divided_differences(x, f, dtype=np.float64):
     coeffs = d[0, :].copy()
     return coeffs, y
 
+
+# Divided differences from precomputed (x_nodes, y_values); no callable f.
+def divided_differences_from_values(x_nodes, y_values, dtype=np.float64):
+    x_nodes = np.asarray(x_nodes, dtype=dtype).ravel()
+    y_values = np.asarray(y_values, dtype=dtype).ravel()
+    n = x_nodes.size
+    if y_values.size != n:
+        raise ValueError("y_values must have same length as x_nodes")
+    d = np.zeros((n, n), dtype=dtype)
+    d[:, 0] = y_values
+    for j in range(1, n):
+        for i in range(0, n - j):
+            d[i, j] = (d[i + 1, j - 1] - d[i, j - 1]) / (x_nodes[i + j] - x_nodes[i])
+    coeffs = d[0, :].copy()
+    return coeffs
+
 # Evaluates Newton form using Horner-like recurrence.
 # p = c_{n-1} + (x - x_{n-1}) * ( c_{n-2} + (x - x_{n-2}) * ( ... ) ).
 def newton_eval(x_eval, x_nodes, coeffs, dtype=np.float64):
