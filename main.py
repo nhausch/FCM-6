@@ -44,8 +44,8 @@ def parse_args():
     p.add_argument(
         "--degree-max",
         type=int,
-        default=20,
-        help="Max n for tasks 2-4 (default 20).",
+        default=30,
+        help="Max n for tasks 2-4 (default 30).",
     )
     p.add_argument(
         "--n-max",

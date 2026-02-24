@@ -31,6 +31,10 @@ def run(args):
             path = os.path.join(output_dir, "task3_forward_error.png")
             plot_forward_error_vs_degree(results, list(results.keys()), path)
             print(f"Saved plot to {path}")
+            for method in ["Newton_inc", "Newton_dec", "Newton_Leja"]:
+                path_newton = os.path.join(output_dir, f"task3_forward_error_{method}.png")
+                plot_forward_error_vs_degree(results, list(results.keys()), path_newton, method=method)
+                print(f"Saved plot to {path_newton}")
         except Exception as e:
             print(f"Plotting failed: {e}")
         try:
