@@ -6,7 +6,49 @@ from evaluation import error_stability
 from utils.precision import get_dtype
 
 
-# Runs a single experiment for a given mesh type / meshg size.
+def build_newton_interpolants(x_nodes, y_values, x_eval, dtype):
+    x_nodes = np.asarray(x_nodes, dtype=dtype).ravel()
+    y_values = np.asarray(y_values, dtype=dtype).ravel()
+    x_eval = np.asarray(x_eval, dtype=dtype).ravel()
+    out = {}
+    for order_name, order_mode in [
+        ("Newton_inc", "increasing"),
+        ("Newton_dec", "decreasing"),
+        ("Newton_Leja", "leja"),
+    ]:
+        idx = ordering.order_mesh_indices(x_nodes, order_mode)
+        x_ord = x_nodes[idx]
+        y_ord = y_values[idx]
+        coeffs = newton.divided_differences_from_values(x_ord, y_ord, dtype)
+        p_newt = newton.newton_eval(x_eval, x_ord, coeffs, dtype)
+        out[order_name] = p_newt
+    return out
+
+def compute_forward_errors_and_ratios(interpolants, p_ref, Lambda_n, eps, y_ref=None):
+    p_ref = np.asarray(p_ref).ravel()
+    if y_ref is not None:
+        y_ref = np.asarray(y_ref).ravel()
+        scale = np.nanmax(np.abs(y_ref)) if y_ref.size > 0 else 1.0
+        if scale <= 0:
+            scale = 1.0
+        bound = Lambda_n * eps * scale
+    else:
+        bound = max(Lambda_n * eps, 1e-16)
+    if bound <= 0:
+        bound = 1e-16
+
+    forward_errors = {}
+    stability_ratios = {}
+    within_bound = {}
+    for name, p_single in interpolants.items():
+        p_single = np.asarray(p_single).ravel()
+        fe = statistics.sup_norm(p_single.astype(np.float64) - p_ref.astype(np.float64))
+        forward_errors[name] = fe
+        stability_ratios[name] = fe / bound
+        within_bound[name] = fe <= bound
+    return forward_errors, stability_ratios, within_bound, bound
+
+# Runs a single experiment for a given mesh type / mesh size.
 # Tasks 2 and 3.
 def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="single"):
     dtype_ref = np.float64
@@ -31,41 +73,31 @@ def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="
     Lambda_n = statistics.lebesgue_constant(k_x1)
     Hn_val = statistics.Hn(k_xy)
 
-    # Compute the interpolant (single precision unless otherwise specified).
-    # Evalute the grid.
+    # Build interpolants: BF2 + Newton (three orderings).
     x_nodes_a = meshes.build_mesh(mesh_type, a, b, n, dtype_approx)
     beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
-    p_approx = barycentric_form2.barycentric2_eval(
+    p_bf2 = barycentric_form2.barycentric2_eval(
         x_grid_approx, x_nodes_a, beta_a, y_a, dtype_approx
     )
-
-    # Cast the reference interpolant to the same dtype as the approximate one so 
-    # the forward error is computed in a consistent way
-    p_ref_casted = np.asarray(p_ref, dtype=dtype_approx)
-
-    # Compute the forward error (max absolute difference).
-    fe_sup = error_stability.forward_error_sup(p_approx, p_ref_casted)
-
-    # Get the unit roundoff of the precision used for approximation.
-    eps = np.finfo(dtype_approx).eps
-
-    # Check if the forward error stayed within (condition number * precision bound).
-    cmp_res = error_stability.compare_to_bound(
-        fe_sup, Lambda_n, eps, y_ref=y_ref
+    y_ref_approx = np.asarray(y_ref, dtype=dtype_approx)
+    newton_interpolants = build_newton_interpolants(
+        x_nodes, y_ref_approx, x_grid_approx, dtype_approx
     )
+    interpolants = {"BF2": p_bf2, **newton_interpolants}
 
-    # Compute the stability ratio (forward error / bound).
-    ratio = error_stability.stability_ratio(
-        fe_sup, Lambda_n, eps, y_ref=y_ref
+    p_ref_casted = np.asarray(p_ref, dtype=dtype_approx)
+    eps = np.finfo(dtype_approx).eps
+    forward_errors, stability_ratios, within_bound, bound = compute_forward_errors_and_ratios(
+        interpolants, p_ref_casted, Lambda_n, eps, y_ref=y_ref
     )
 
     return {
         "kappa_xy_max": Hn_val,
         "Lambda_n": Lambda_n,
-        "forward_error_sup": fe_sup,
-        "stability_ratio": ratio,
-        "within_bound": cmp_res["within_bound"],
-        "bound": cmp_res["bound"],
+        "forward_errors": forward_errors,
+        "stability_ratios": stability_ratios,
+        "within_bound": within_bound,
+        "bound": bound,
     }
 
 # Runs the double loop over mesh_types and degree_range (n list). Return nested results.
@@ -116,28 +148,19 @@ def run_experiment_with_nodes(
     # Construct the reference polynomial (double precision).
     p_exact = np.asarray(f(x_eval), dtype=dtype_ref).ravel()
 
-    # Construct the interpolants (single precision).
+    # Construct the interpolants (single precision): BF2 + Newton (three orderings).
     beta, y_single = barycentric_form2.setup_barycentric2_from_values(
         x_nodes, f_values_single, dtype_approx
     )
     p_bf2 = barycentric_form2.barycentric2_eval(
         x_eval_approx, x_nodes.astype(dtype_approx), beta, y_single, dtype_approx
     )
+    newton_interpolants = build_newton_interpolants(
+        x_nodes, f_values_single, x_eval_approx, dtype_approx
+    )
+    interpolants = {"BF2": p_bf2, **newton_interpolants}
 
-    interpolants = {"BF2": p_bf2}
-    for order_name, order_mode in [
-        ("Newton_inc", "increasing"),
-        ("Newton_dec", "decreasing"),
-        ("Newton_Leja", "leja"),
-    ]:
-        idx = ordering.order_mesh_indices(x_nodes, order_mode)
-        x_ord = x_nodes[idx].astype(dtype_approx)
-        y_ord = f_values_single[idx]
-        coeffs = newton.divided_differences_from_values(x_ord, y_ord, dtype_approx)
-        p_newt = newton.newton_eval(x_eval_approx, x_ord, coeffs, dtype_approx)
-        interpolants[order_name] = p_newt
-
-    # 5. Conditioning (double)
+    # Conditioning (double).
     gamma = barycentric_form1.compute_gamma(x_nodes, dtype_ref)
     kappa_xy = condition_numbers.kappa_xy(
         x_eval, x_nodes, gamma, f_values_double, dtype_ref
@@ -146,18 +169,15 @@ def run_experiment_with_nodes(
     Lambda_n = statistics.lebesgue_constant(kappa_1)
     H_n = statistics.Hn(kappa_xy)
 
-    # 6. Forward errors and stability ratios
-    u = np.finfo(np.float32).eps
-    forward_errors = {}
-    forward_error_vectors = {}
-    stability_ratios = {}
-    for name, p_single in interpolants.items():
-        p_single_f64 = np.asarray(p_single, dtype=dtype_ref).ravel()
-        err_vec = np.abs(p_single_f64 - p_exact)
-        forward_error_vectors[name] = err_vec
-        forward_errors[name] = statistics.sup_norm(err_vec)
-        bound = max(H_n * u, 1e-16)
-        stability_ratios[name] = forward_errors[name] / bound
+    # Forward errors and stability ratios (unified bound: Lambda_n * eps * max|y|)
+    eps = np.finfo(dtype_approx).eps
+    forward_errors, stability_ratios, within_bound, bound = compute_forward_errors_and_ratios(
+        interpolants, p_exact, Lambda_n, eps, y_ref=f_values_double
+    )
+    forward_error_vectors = {
+        name: np.abs(np.asarray(p_single, dtype=dtype_ref).ravel() - p_exact)
+        for name, p_single in interpolants.items()
+    }
 
     return {
         "Lambda_n": Lambda_n,
@@ -165,6 +185,7 @@ def run_experiment_with_nodes(
         "forward_errors": forward_errors,
         "forward_error_vectors": forward_error_vectors,
         "stability_ratios": stability_ratios,
+        "within_bound": within_bound,
         "x_eval": x_eval,
         "kappa_1": kappa_1,
         "kappa_xy": kappa_xy,

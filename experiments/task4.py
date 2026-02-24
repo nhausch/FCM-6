@@ -50,7 +50,7 @@ def run(args):
             for m in [n + d for d in OVER_INTERP_OFFSETS]:
                 m_nodes = m + 1
                 x_large = meshes.build_mesh(mesh_type, a, b, m_nodes, np.float64)
-                res_over = run_experiment.run_single_experiment(
+                res_over = run_experiment.run_experiment_with_nodes(
                     f3,
                     x_large,
                     degree=m,

@@ -18,7 +18,7 @@ def run(args):
         "evaluation_grid_size": getattr(args, "evaluation_grid_size", 2000),
         "precision": getattr(args, "precision", "single"),
     }
-    results = run_experiment.run_task_f(config, f1.func, (a, b))
+    results = run_experiment.run_task_sweep(config, f1.func, (a, b))
     _print_table(results)
     if getattr(args, "plot", False):
         output_dir = getattr(args, "output_dir", "output")
@@ -33,11 +33,13 @@ def run(args):
     return results
 
 def _print_table(results):
-    print("\nTask 2 (f1): forward_error_sup / Lambda_n")
-    print("-" * 60)
+    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+    print("\nTask 2 (f1): forward_errors / Lambda_n (per method)")
+    print("-" * 85)
     for mesh_type in results:
         print(f"  {mesh_type}:")
         for n in sorted(results[mesh_type].keys()):
             r = results[mesh_type][n]
-            print(f"    n={n:3d}  fe_sup={r['forward_error_sup']:.4e}  Lambda_n={r['Lambda_n']:.4f}")
+            fe_str = "  ".join(f"fe_{m}={r['forward_errors'][m]:.4e}" for m in methods)
+            print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.4e}  {fe_str}")
     print()
