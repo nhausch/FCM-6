@@ -30,6 +30,34 @@ def run(args):
             print(f"Saved plot to {path}")
         except Exception as e:
             print(f"Plotting failed: {e}")
+        try:
+            import numpy as np
+            from interpolation import meshes
+            from utils.plotting import plot_relative_error_vs_x
+            n_plot = 30
+            methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+            for mesh_type in ["uniform", "cheb1"]:
+                x_nodes = meshes.build_mesh(mesh_type, a, b, n_plot, np.float64)
+                res = run_experiment.run_experiment_with_nodes(
+                    f1.func,
+                    x_nodes,
+                    degree=n_plot - 1,
+                    mesh_type=mesh_type,
+                    grid_size=config["evaluation_grid_size"],
+                    precision=config["precision"],
+                )
+                path = os.path.join(output_dir, f"task2_relative_error_30pt_{mesh_type}.png")
+                plot_relative_error_vs_x(
+                    res["x_eval"],
+                    res["p_exact"],
+                    res["forward_error_vectors"],
+                    methods,
+                    path,
+                    title=f"Relative error in p_n(x), 30 nodes, {mesh_type} (f1)",
+                )
+                print(f"Saved plot to {path}")
+        except Exception as e:
+            print(f"Relative-error plot failed: {e}")
     return results
 
 def _print_table(results):

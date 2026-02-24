@@ -32,6 +32,35 @@ def plot_forward_error_vs_degree(results, mesh_types, path, method="BF2"):
     plt.close()
 
 
+def plot_relative_error_vs_x(x_eval, p_ref, absolute_errors_by_method, methods, path, title=None):
+    """
+    Plot pointwise relative error vs x (log scale), Higham-style.
+    Relative error = |p_computed - p_ref| / max(|p_ref|, 1e-16).
+    absolute_errors_by_method: dict method_name -> absolute error array (same length as x_eval).
+    """
+    import numpy as np
+    p_ref = np.asarray(p_ref).ravel()
+    tiny = 1e-16
+    floor_log = 1e-20
+    denom = np.maximum(np.abs(p_ref), tiny)
+    plt.figure(figsize=(8, 5))
+    for method in methods:
+        if method not in absolute_errors_by_method:
+            continue
+        abs_err = np.asarray(absolute_errors_by_method[method]).ravel()
+        rel_err = np.maximum(abs_err / denom, floor_log)
+        plt.semilogy(x_eval, rel_err, label=method, alpha=0.8)
+    plt.xlabel("x")
+    plt.ylabel("Relative error")
+    if title:
+        plt.title(title)
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(path, dpi=150)
+    plt.close()
+
+
 def plot_convergence(n_list, errors_per_mesh, path):
     """
     Plot error vs n for each mesh type (Task 5). errors_per_mesh[mesh_type] = (n_list, error_list).

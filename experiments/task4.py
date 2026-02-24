@@ -34,7 +34,7 @@ def run(args):
             f3, _interval, _roots, _denom = make_f3(x_nodes)
 
             # Canonical: interpolate with same n+1 nodes
-            res = run_experiment.run_single_experiment(
+            res = run_experiment.run_experiment_with_nodes(
                 f3,
                 x_nodes,
                 degree=n,
@@ -65,6 +65,7 @@ def run(args):
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
         _plot_n29_higham(results_canonical, output_dir)
+        _plot_relative_error_30pt(results_canonical, output_dir)
     return {"canonical": results_canonical, "over": results_over}
 
 
@@ -138,4 +139,24 @@ def _plot_n29_higham(results_canonical, output_dir):
         path = os.path.join(output_dir, f"task4_{mesh_type}_n29_higham.png")
         plt.savefig(path, dpi=150)
         plt.close()
+        print(f"Saved plot to {path}")
+
+
+def _plot_relative_error_30pt(results_canonical, output_dir):
+    """Relative error vs x (Higham-style) for 30 points: uniform and Chebyshev first kind."""
+    from utils.plotting import plot_relative_error_vs_x
+
+    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+    for mesh_type in ["uniform", "cheb1"]:
+        if mesh_type not in results_canonical or 29 not in results_canonical[mesh_type]:
+            continue
+        r = results_canonical[mesh_type][29]
+        x_eval = r["x_eval"]
+        p_ref = r["p_exact"]
+        absolute_errors_by_method = r["forward_error_vectors"]
+        path = os.path.join(output_dir, f"task4_relative_error_30pt_{mesh_type}.png")
+        title = f"Relative error in p_n(x), 30 nodes, {mesh_type} (f3 = ℓ_n)"
+        plot_relative_error_vs_x(
+            x_eval, p_ref, absolute_errors_by_method, methods, path, title=title
+        )
         print(f"Saved plot to {path}")
