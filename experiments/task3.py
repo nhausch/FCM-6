@@ -18,7 +18,7 @@ def run(args):
         "mesh_types": ["uniform", "cheb1", "cheb2"],
         "degree_range": n_list,
         "interval": (a, b),
-        "evaluation_grid_size": getattr(args, "evaluation_grid_size", 2000),
+        "evaluation_grid_size": getattr(args, "evaluation_grid_size", 100),
         "precision": getattr(args, "precision", "single"),
     }
     results = run_experiment.run_task_sweep(config, func, (a, b))
@@ -76,6 +76,6 @@ def _print_table(results):
         print(f"  {mesh_type}:")
         for n in sorted(results[mesh_type].keys()):
             r = results[mesh_type][n]
-            fe_str = "  ".join(f"fe_{m}={r['forward_errors'][m]:.4e}" for m in methods)
-            print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.4e}  {fe_str}")
+            fe_str = "  ".join(f"fe_{m}={r['forward_errors'][m]:.10f}" for m in methods)
+            print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.10f}  {fe_str}")
     print()

@@ -62,8 +62,8 @@ def parse_args():
     p.add_argument(
         "--evaluation-grid-size",
         type=int,
-        default=2000,
-        help="Grid size for evaluation (default 2000).",
+        default=100,
+        help="Grid size for evaluation (default 100).",
     )
     p.add_argument(
         "--f2-d",

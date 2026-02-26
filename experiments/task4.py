@@ -79,12 +79,12 @@ def _print_table(results_canonical, results_over):
             fe_bf2 = r["forward_errors"]["BF2"]
             ratio_bf2 = r["stability_ratios"]["BF2"]
             print(
-                f"    n={n:2d}  Lambda_n={r['Lambda_n']:.4e}  H_n={r['H_n']:.4e}  "
-                f"fe_BF2={fe_bf2:.4e}  ratio_BF2={ratio_bf2:.4e}"
+                f"    n={n:2d}  Lambda_n={r['Lambda_n']:.10f}  H_n={r['H_n']:.10f}  "
+                f"fe_BF2={fe_bf2:.10f}  ratio_BF2={ratio_bf2:.10f}"
             )
             for form in ["Newton_inc", "Newton_dec", "Newton_Leja"]:
                 fe = r["forward_errors"][form]
-                print(f"           fe_{form}={fe:.4e}")
+                print(f"           fe_{form}={fe:.10f}")
     print("\nTask 4 (f3): over-interpolation (sample m=n+5)")
     print("-" * 60)
     for mesh_type in MESH_TYPES:
@@ -95,7 +95,7 @@ def _print_table(results_canonical, results_over):
                 continue
             r = results_over[mesh_type][n][m]
             fe_bf2 = r["forward_errors"]["BF2"]
-            print(f"    n={n:2d} m={m:2d}  fe_BF2={fe_bf2:.4e}  Lambda_n={r['Lambda_n']:.4e}")
+            print(f"    n={n:2d} m={m:2d}  fe_BF2={fe_bf2:.10f}  Lambda_n={r['Lambda_n']:.10f}")
     print()
 
 

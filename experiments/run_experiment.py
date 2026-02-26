@@ -106,7 +106,7 @@ def run_task_sweep(config, f, interval, mesh_types=None):
     a, b = interval
     mesh_types = mesh_types or config.get("mesh_types", ["uniform", "cheb1", "cheb2"])
     n_list = config["degree_range"]
-    grid_size = config.get("evaluation_grid_size", 2000)
+    grid_size = config.get("evaluation_grid_size", 100)
     precision = config.get("precision", "single")
 
     results = {}

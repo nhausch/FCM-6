@@ -12,7 +12,7 @@ def run(args):
     a, b = args.interval if hasattr(args, "interval") and args.interval else f4.interval
     n_min = 5
     n_max = getattr(args, "n_max", 50)
-    grid_size = getattr(args, "evaluation_grid_size", 2000)
+    grid_size = getattr(args, "evaluation_grid_size", 100)
     x_grid = np.linspace(a, b, grid_size, dtype=np.float64)
     f_ref = f4.func(x_grid)
 
@@ -45,11 +45,10 @@ def run(args):
             print(f"Plotting failed: {e}")
     return errors_per_mesh
 
-
 def _print_table(n_list, errors_per_mesh):
     print("\nTask 5 (f4 convergence): sup_norm(p_n - f4) vs n")
     print("-" * 60)
     for mesh_type in errors_per_mesh:
         ns, errs = errors_per_mesh[mesh_type]
-        print(f"  {mesh_type}: n_min={min(ns)}, n_max={max(ns)}  err_min={min(errs):.4e}  err_max={max(errs):.4e}")
+        print(f"  {mesh_type}: n_min={min(ns)}, n_max={max(ns)}  err_min={min(errs):.10f}  err_max={max(errs):.10f}")
     print()
