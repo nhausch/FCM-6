@@ -2,6 +2,8 @@
 
 import os
 
+import numpy as np
+
 from functions import f1
 from . import run_experiment
 
@@ -21,6 +23,8 @@ def run(args):
     results = run_experiment.run_task_sweep(config, f1.func, (a, b))
     _print_table(results)
     _print_ratios_table(results)
+    _print_bf2_bound_table(results)
+    _print_newton_max_dd_table(results)
     if getattr(args, "plot", False):
         output_dir = getattr(args, "output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
@@ -88,5 +92,35 @@ def _print_ratios_table(results):
         for n in sorted(results[mesh_type].keys()):
             r = results[mesh_type][n]
             parts = [f"ratio_{m}={r['stability_ratios'][m]:>{w}.10f} ({r['within_bound'][m]})" for m in methods]
+            print(f"    n={n:3d}  " + "  ".join(parts))
+    print()
+
+
+def _print_bf2_bound_table(results):
+    w = 14
+    print("\nTask 2 (f1): BF2 forward error bound")
+    print("-" * 100)
+    for mesh_type in results:
+        print(f"  {mesh_type}:")
+        for n in sorted(results[mesh_type].keys()):
+            r = results[mesh_type][n]
+            bf2 = r["bf2_forward_bound"]
+            bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
+            rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
+            max_ratio = float(bf2["max_ratio"])
+            print(f"    n={n:3d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}")
+    print()
+
+
+def _print_newton_max_dd_table(results):
+    newton_orders = ["Newton_inc", "Newton_dec", "Newton_Leja"]
+    w = 14
+    print("\nTask 2 (f1): Newton divided differences max |coeff|")
+    print("-" * 80)
+    for mesh_type in results:
+        print(f"  {mesh_type}:")
+        for n in sorted(results[mesh_type].keys()):
+            r = results[mesh_type][n]
+            parts = [f"max_dd_{m}={r['newton_max_dd'][m]:>{w}.10f}" for m in newton_orders]
             print(f"    n={n:3d}  " + "  ".join(parts))
     print()

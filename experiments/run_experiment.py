@@ -11,6 +11,7 @@ def build_newton_interpolants(x_nodes, y_values, x_eval, dtype):
     y_values = np.asarray(y_values, dtype=dtype).ravel()
     x_eval = np.asarray(x_eval, dtype=dtype).ravel()
     out = {}
+    max_dd = {}
     for order_name, order_mode in [
         ("Newton_inc", "increasing"),
         ("Newton_dec", "decreasing"),
@@ -20,9 +21,10 @@ def build_newton_interpolants(x_nodes, y_values, x_eval, dtype):
         x_ord = x_nodes[idx]
         y_ord = y_values[idx]
         coeffs = newton.divided_differences_from_values(x_ord, y_ord, dtype)
+        max_dd[order_name] = float(np.max(np.abs(coeffs)))
         p_newt = newton.newton_eval(x_eval, x_ord, coeffs, dtype)
         out[order_name] = p_newt
-    return out
+    return out, max_dd
 
 def compute_forward_errors_and_ratios(interpolants, p_ref, Lambda_n, eps, y_ref=None):
     p_ref = np.asarray(p_ref).ravel()
@@ -80,7 +82,7 @@ def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="
         x_grid_approx, x_nodes_a, beta_a, y_a, dtype_approx
     )
     y_ref_approx = np.asarray(y_ref, dtype=dtype_approx)
-    newton_interpolants = build_newton_interpolants(
+    newton_interpolants, newton_max_dd = build_newton_interpolants(
         x_nodes, y_ref_approx, x_grid_approx, dtype_approx
     )
     interpolants = {"BF2": p_bf2, **newton_interpolants}
@@ -104,6 +106,7 @@ def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="
         "stability_ratios": stability_ratios,
         "within_bound": within_bound,
         "bound": bound,
+        "newton_max_dd": newton_max_dd,
         "bf2_forward_bound": {
             "relative_error": bf2_rel,
             "theoretical_bound": bf2_bound_pt,
@@ -167,7 +170,7 @@ def run_experiment_with_nodes(
     p_bf2 = barycentric_form2.barycentric2_eval(
         x_eval_approx, x_nodes.astype(dtype_approx), beta, y_single, dtype_approx
     )
-    newton_interpolants = build_newton_interpolants(
+    newton_interpolants, newton_max_dd = build_newton_interpolants(
         x_nodes, f_values_single, x_eval_approx, dtype_approx
     )
     interpolants = {"BF2": p_bf2, **newton_interpolants}
@@ -204,6 +207,7 @@ def run_experiment_with_nodes(
         "forward_error_vectors": forward_error_vectors,
         "stability_ratios": stability_ratios,
         "within_bound": within_bound,
+        "newton_max_dd": newton_max_dd,
         "x_eval": x_eval,
         "kappa_1": kappa_1,
         "kappa_xy": kappa_xy,

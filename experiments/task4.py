@@ -63,6 +63,8 @@ def run(args):
 
     _print_table(results_canonical, results_over)
     _print_ratios_table(results_canonical, results_over)
+    _print_bf2_bound_table(results_canonical, results_over)
+    _print_newton_max_dd_table(results_canonical, results_over)
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
         _plot_n29_higham(results_canonical, output_dir)
@@ -121,6 +123,61 @@ def _print_ratios_table(results_canonical, results_over):
                 continue
             r = results_over[mesh_type][n][m]
             parts = [f"ratio_{meth}={r['stability_ratios'][meth]:>{w}.10f} ({r['within_bound'][meth]})" for meth in methods]
+            print(f"    n={n:2d} m={m:2d}  " + "  ".join(parts))
+    print()
+
+
+def _print_bf2_bound_table(results_canonical, results_over):
+    w = 14
+    print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound — canonical")
+    print("-" * 100)
+    for mesh_type in MESH_TYPES:
+        print(f"  {mesh_type}:")
+        for n in sorted(results_canonical[mesh_type].keys()):
+            r = results_canonical[mesh_type][n]
+            bf2 = r["bf2_forward_bound"]
+            bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
+            rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
+            max_ratio = float(bf2["max_ratio"])
+            print(f"    n={n:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}")
+    print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound — over-interpolation (m=n+5)")
+    print("-" * 100)
+    for mesh_type in MESH_TYPES:
+        print(f"  {mesh_type}:")
+        for n in sorted(results_over[mesh_type].keys()):
+            m = n + 5
+            if m not in results_over[mesh_type][n]:
+                continue
+            r = results_over[mesh_type][n][m]
+            bf2 = r["bf2_forward_bound"]
+            bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
+            rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
+            max_ratio = float(bf2["max_ratio"])
+            print(f"    n={n:2d} m={m:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}")
+    print()
+
+
+def _print_newton_max_dd_table(results_canonical, results_over):
+    newton_orders = ["Newton_inc", "Newton_dec", "Newton_Leja"]
+    w = 14
+    print("\nTask 4 (f3 = ℓ_n): Newton divided differences max |coeff| — canonical")
+    print("-" * 80)
+    for mesh_type in MESH_TYPES:
+        print(f"  {mesh_type}:")
+        for n in sorted(results_canonical[mesh_type].keys()):
+            r = results_canonical[mesh_type][n]
+            parts = [f"max_dd_{m}={r['newton_max_dd'][m]:>{w}.10f}" for m in newton_orders]
+            print(f"    n={n:2d}  " + "  ".join(parts))
+    print("\nTask 4 (f3 = ℓ_n): Newton divided differences max |coeff| — over-interpolation (m=n+5)")
+    print("-" * 80)
+    for mesh_type in MESH_TYPES:
+        print(f"  {mesh_type}:")
+        for n in sorted(results_over[mesh_type].keys()):
+            m = n + 5
+            if m not in results_over[mesh_type][n]:
+                continue
+            r = results_over[mesh_type][n][m]
+            parts = [f"max_dd_{meth}={r['newton_max_dd'][meth]:>{w}.10f}" for meth in newton_orders]
             print(f"    n={n:2d} m={m:2d}  " + "  ".join(parts))
     print()
 
