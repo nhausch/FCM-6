@@ -57,3 +57,71 @@ def compare_to_bound(forward_error_sup_val, Lambda_n, eps, y_ref=None):
         "within_bound": forward_error_sup_val <= bound,
         "ratio": ratio,
     }
+
+
+def verify_barycentric2_forward_bound(
+    p_hat,
+    p_ref,
+    k_xy,
+    k_x1,
+    n,
+    eps,
+):
+    """
+    Verifies the Higham forward error bound for Barycentric Form 2:
+
+        |p - p_hat| / |p|
+        <= (3n+4) κ(x,n,y) u + (3n+2) κ(x,n,1) u + O(u^2)
+
+    Parameters
+    ----------
+    p_hat : array
+        Computed interpolant (e.g. single precision) evaluated on grid.
+    p_ref : array
+        Reference interpolant (e.g. double precision) on same grid.
+    k_xy : array
+        κ(x, n, y) evaluated on grid (double).
+    k_x1 : array
+        κ(x, n, 1) evaluated on grid (double).
+    n : int
+        Polynomial degree (number of nodes - 1).
+    eps : float
+        Unit roundoff of working precision.
+
+    Returns
+    -------
+    relative_error : ndarray
+        Pointwise relative forward error |p_hat - p_ref| / |p_ref|.
+    theoretical_bound : ndarray
+        Pointwise first-order bound (3n+4)*k_xy*eps + (3n+2)*k_x1*eps.
+    stability_ratio : ndarray
+        Pointwise ratio relative_error / theoretical_bound.
+    max_ratio : float
+        Maximum of stability_ratio (scalar).
+    """
+    p_ref = np.asarray(p_ref, dtype=np.float64).ravel()
+    p_hat = np.asarray(p_hat, dtype=np.float64).ravel()
+    k_xy = np.asarray(k_xy, dtype=np.float64).ravel()
+    k_x1 = np.asarray(k_x1, dtype=np.float64).ravel()
+
+    denom = np.abs(p_ref)
+    denom_safe = np.where(denom > 0, denom, 1.0)
+
+    relative_error = np.abs(p_hat - p_ref) / denom_safe
+
+    theoretical_bound = (
+        (3 * n + 4) * k_xy * eps +
+        (3 * n + 2) * k_x1 * eps
+    )
+
+    bound_safe = np.where(theoretical_bound > 0, theoretical_bound, 1.0)
+    stability_ratio = relative_error / bound_safe
+
+    max_ratio = np.nanmax(stability_ratio)
+
+    return (
+        relative_error,
+        theoretical_bound,
+        stability_ratio,
+        max_ratio,
+    )

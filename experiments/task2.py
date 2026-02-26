@@ -20,6 +20,7 @@ def run(args):
     }
     results = run_experiment.run_task_sweep(config, f1.func, (a, b))
     _print_table(results)
+    _print_ratios_table(results)
     if getattr(args, "plot", False):
         output_dir = getattr(args, "output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
@@ -74,4 +75,18 @@ def _print_table(results):
             r = results[mesh_type][n]
             fe_str = "  ".join(f"fe_{m}={r['forward_errors'][m]:.10f}" for m in methods)
             print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.10f}  {fe_str}")
+    print()
+
+
+def _print_ratios_table(results):
+    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+    w = 14
+    print("\nTask 2 (f1): stability_ratios (within_bound)")
+    print("-" * 120)
+    for mesh_type in results:
+        print(f"  {mesh_type}:")
+        for n in sorted(results[mesh_type].keys()):
+            r = results[mesh_type][n]
+            parts = [f"ratio_{m}={r['stability_ratios'][m]:>{w}.10f} ({r['within_bound'][m]})" for m in methods]
+            print(f"    n={n:3d}  " + "  ".join(parts))
     print()

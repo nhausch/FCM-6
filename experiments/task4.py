@@ -62,6 +62,7 @@ def run(args):
                 results_over[mesh_type][n][m] = res_over
 
     _print_table(results_canonical, results_over)
+    _print_ratios_table(results_canonical, results_over)
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
         _plot_n29_higham(results_canonical, output_dir)
@@ -96,6 +97,31 @@ def _print_table(results_canonical, results_over):
             r = results_over[mesh_type][n][m]
             fe_bf2 = r["forward_errors"]["BF2"]
             print(f"    n={n:2d} m={m:2d}  fe_BF2={fe_bf2:.10f}  Lambda_n={r['Lambda_n']:.10f}")
+    print()
+
+
+def _print_ratios_table(results_canonical, results_over):
+    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+    w = 14
+    print("\nTask 4 (f3 = ℓ_n): stability_ratios (within_bound) — canonical")
+    print("-" * 120)
+    for mesh_type in MESH_TYPES:
+        print(f"  {mesh_type}:")
+        for n in sorted(results_canonical[mesh_type].keys()):
+            r = results_canonical[mesh_type][n]
+            parts = [f"ratio_{m}={r['stability_ratios'][m]:>{w}.10f} ({r['within_bound'][m]})" for m in methods]
+            print(f"    n={n:2d}  " + "  ".join(parts))
+    print("\nTask 4 (f3 = ℓ_n): stability_ratios (within_bound) — over-interpolation (m=n+5)")
+    print("-" * 120)
+    for mesh_type in MESH_TYPES:
+        print(f"  {mesh_type}:")
+        for n in sorted(results_over[mesh_type].keys()):
+            m = n + 5
+            if m not in results_over[mesh_type][n]:
+                continue
+            r = results_over[mesh_type][n][m]
+            parts = [f"ratio_{meth}={r['stability_ratios'][meth]:>{w}.10f} ({r['within_bound'][meth]})" for meth in methods]
+            print(f"    n={n:2d} m={m:2d}  " + "  ".join(parts))
     print()
 
 

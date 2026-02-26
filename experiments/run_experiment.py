@@ -91,6 +91,12 @@ def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="
         interpolants, p_ref_casted, Lambda_n, eps, y_ref=y_ref
     )
 
+    # Barycentric Form 2 Higham forward error bound (pointwise).
+    n = x_nodes.size
+    bf2_rel, bf2_bound_pt, bf2_ratio_pt, bf2_max_ratio = error_stability.verify_barycentric2_forward_bound(
+        p_bf2, p_ref, k_xy, k_x1, n - 1, eps
+    )
+
     return {
         "kappa_xy_max": Hn_val,
         "Lambda_n": Lambda_n,
@@ -98,6 +104,12 @@ def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="
         "stability_ratios": stability_ratios,
         "within_bound": within_bound,
         "bound": bound,
+        "bf2_forward_bound": {
+            "relative_error": bf2_rel,
+            "theoretical_bound": bf2_bound_pt,
+            "stability_ratio": bf2_ratio_pt,
+            "max_ratio": bf2_max_ratio,
+        },
     }
 
 # Runs the double loop over mesh_types and degree_range (n list). Return nested results.
@@ -179,6 +191,12 @@ def run_experiment_with_nodes(
         for name, p_single in interpolants.items()
     }
 
+    # Barycentric Form 2 Higham forward error bound (pointwise).
+    n = n_nodes - 1
+    bf2_rel, bf2_bound_pt, bf2_ratio_pt, bf2_max_ratio = error_stability.verify_barycentric2_forward_bound(
+        p_bf2, p_exact, kappa_xy, kappa_1, n, eps
+    )
+
     return {
         "Lambda_n": Lambda_n,
         "H_n": H_n,
@@ -192,5 +210,11 @@ def run_experiment_with_nodes(
         "p_exact": p_exact,
         "interpolants": interpolants,
         "label": label,
+        "bf2_forward_bound": {
+            "relative_error": bf2_rel,
+            "theoretical_bound": bf2_bound_pt,
+            "stability_ratio": bf2_ratio_pt,
+            "max_ratio": bf2_max_ratio,
+        },
     }
 
