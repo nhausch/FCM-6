@@ -104,18 +104,31 @@ def verify_barycentric2_forward_bound(
     k_xy = np.asarray(k_xy, dtype=np.float64).ravel()
     k_x1 = np.asarray(k_x1, dtype=np.float64).ravel()
 
-    denom = np.abs(p_ref)
-    denom_safe = np.where(denom > 0, denom, 1.0)
+    tol = 10 * eps  # or something reasonable
 
-    relative_error = np.abs(p_hat - p_ref) / denom_safe
-
-    theoretical_bound = (
-        (3 * n + 4) * k_xy * eps +
-        (3 * n + 2) * k_x1 * eps
+    valid = (
+        (np.abs(p_ref) > tol) &
+        np.isfinite(k_xy) &
+        np.isfinite(k_x1)
     )
 
-    bound_safe = np.where(theoretical_bound > 0, theoretical_bound, 1.0)
-    stability_ratio = relative_error / bound_safe
+    relative_error = np.full_like(p_ref, np.nan)
+    relative_error[valid] = (
+        np.abs(p_hat[valid] - p_ref[valid]) /
+        np.abs(p_ref[valid])
+    )
+
+    theoretical_bound = np.full_like(p_ref, np.nan)
+    theoretical_bound[valid] = (
+        (3 * n + 4) * k_xy[valid] * eps +
+        (3 * n + 2) * k_x1[valid] * eps
+    )
+
+    stability_ratio = np.full_like(p_ref, np.nan)
+    good = valid & (theoretical_bound > 0)
+    stability_ratio[good] = (
+        relative_error[good] / theoretical_bound[good]
+    )
 
     max_ratio = np.nanmax(stability_ratio)
 
