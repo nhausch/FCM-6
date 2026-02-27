@@ -50,13 +50,14 @@ def run(args):
             methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
             for mesh_type in ["uniform", "cheb1"]:
                 x_nodes = meshes.build_mesh(mesh_type, a, b, n_plot, np.float64)
-                res = run_experiment.run_experiment_with_nodes(
+                res = run_experiment.run_experiment(
                     func,
                     x_nodes,
-                    degree=n_plot - 1,
-                    mesh_type=mesh_type,
                     grid_size=config["evaluation_grid_size"],
                     precision=config["precision"],
+                    reference="exact",
+                    mesh_type=mesh_type,
+                    degree=n_plot - 1,
                 )
                 path = os.path.join(output_dir, f"task3_relative_error_30pt_{mesh_type}.png")
                 plot_relative_error_vs_x(

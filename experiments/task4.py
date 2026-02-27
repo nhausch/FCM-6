@@ -34,14 +34,15 @@ def run(args):
             f3, _interval, _roots, _denom = make_f3(x_nodes)
 
             # Canonical: interpolate with same n+1 nodes
-            res = run_experiment.run_experiment_with_nodes(
+            res = run_experiment.run_experiment(
                 f3,
                 x_nodes,
-                degree=n,
-                mesh_type=mesh_type,
-                label="canonical",
                 grid_size=grid_size,
                 precision=precision,
+                reference="exact",
+                mesh_type=mesh_type,
+                degree=n,
+                label="canonical",
             )
             results_canonical[mesh_type][n] = res
 
@@ -50,14 +51,15 @@ def run(args):
             for m in [n + d for d in OVER_INTERP_OFFSETS]:
                 m_nodes = m + 1
                 x_large = meshes.build_mesh(mesh_type, a, b, m_nodes, np.float64)
-                res_over = run_experiment.run_experiment_with_nodes(
+                res_over = run_experiment.run_experiment(
                     f3,
                     x_large,
-                    degree=m,
-                    mesh_type=mesh_type,
-                    label=f"overinterp_{m}",
                     grid_size=grid_size,
                     precision=precision,
+                    reference="exact",
+                    mesh_type=mesh_type,
+                    degree=m,
+                    label=f"overinterp_{m}",
                 )
                 results_over[mesh_type][n][m] = res_over
 

@@ -50,120 +50,54 @@ def compute_forward_errors_and_ratios(interpolants, p_ref, Lambda_n, eps, y_ref=
         within_bound[name] = fe <= bound
     return forward_errors, stability_ratios, within_bound, bound
 
-# Runs a single experiment for a given mesh type / mesh size.
-# Tasks 2 and 3.
-def run_experiment_with_parameters(mesh_type, n, f, a, b, grid_size, precision="single"):
-    dtype_ref = np.float64
-    dtype_approx = get_dtype(precision)
 
-    # Evaluation grid: ref in double (for condition numbers); approx in chosen precision.
-    x_grid = np.linspace(a, b, grid_size, dtype=dtype_ref)
-    x_grid_approx = np.linspace(a, b, grid_size, dtype=dtype_approx)
-
-    # Build the reference mesh and setup Form 1 for condition numbers (double precision).
-    x_nodes = meshes.build_mesh(mesh_type, a, b, n, dtype_ref)
-    gamma_ref, y_ref = barycentric_form1.setup_barycentric1(
-        x_nodes, f, dtype_ref
-    )
-    p_ref = barycentric_form1.barycentric1_eval(
-        x_grid, x_nodes, gamma_ref, y_ref, dtype_ref
-    )
-
-    # Compute the condition numbers (double precision).
-    k_xy = condition_numbers.kappa_xy(x_grid, x_nodes, gamma_ref, y_ref, dtype_ref)
-    k_x1 = condition_numbers.kappa_x1(x_grid, x_nodes, gamma_ref, dtype_ref)
-    Lambda_n = statistics.lebesgue_constant(k_x1)
-    Hn_val = statistics.Hn(k_xy)
-
-    # Build interpolants: BF2 + Newton (three orderings).
-    x_nodes_a = meshes.build_mesh(mesh_type, a, b, n, dtype_approx)
-    beta_a, y_a = barycentric_form2.setup_barycentric2(x_nodes_a, f, dtype_approx)
-    p_bf2 = barycentric_form2.barycentric2_eval(
-        x_grid_approx, x_nodes_a, beta_a, y_a, dtype_approx
-    )
-    y_ref_approx = np.asarray(y_ref, dtype=dtype_approx)
-    newton_interpolants, newton_max_dd = build_newton_interpolants(
-        x_nodes, y_ref_approx, x_grid_approx, dtype_approx
-    )
-    interpolants = {"BF2": p_bf2, **newton_interpolants}
-
-    p_ref_casted = np.asarray(p_ref, dtype=dtype_approx)
-    eps = np.finfo(dtype_approx).eps
-    forward_errors, stability_ratios, within_bound, bound = compute_forward_errors_and_ratios(
-        interpolants, p_ref_casted, Lambda_n, eps, y_ref=y_ref
-    )
-
-    # Barycentric Form 2 Higham forward error bound (pointwise).
-    n = x_nodes.size
-    bf2_rel, bf2_bound_pt, bf2_ratio_pt, bf2_max_ratio = error_stability.verify_barycentric2_forward_bound(
-        p_bf2, p_ref, k_xy, k_x1, n - 1, eps
-    )
-
-    return {
-        "kappa_xy_max": Hn_val,
-        "Lambda_n": Lambda_n,
-        "forward_errors": forward_errors,
-        "stability_ratios": stability_ratios,
-        "within_bound": within_bound,
-        "bound": bound,
-        "newton_max_dd": newton_max_dd,
-        "bf2_forward_bound": {
-            "relative_error": bf2_rel,
-            "theoretical_bound": bf2_bound_pt,
-            "stability_ratio": bf2_ratio_pt,
-            "max_ratio": bf2_max_ratio,
-        },
-    }
-
-# Runs the double loop over mesh_types and degree_range (n list). Return nested results.
-# Tasks 2 and 3.
-def run_task_sweep(config, f, interval, mesh_types=None):
-    a, b = interval
-    mesh_types = mesh_types or config.get("mesh_types", ["uniform", "cheb1", "cheb2"])
-    n_list = config["degree_range"]
-    grid_size = config.get("evaluation_grid_size", 100)
-    precision = config.get("precision", "single")
-
-    results = {}
-    for mesh_type in mesh_types:
-        results[mesh_type] = {}
-        for n in n_list:
-            results[mesh_type][n] = run_experiment_with_parameters(
-                mesh_type, n, f, a, b, grid_size, precision
-            )
-    return results
-
-# Runs a single interpolation experiment with pre-built nodes.
-# Task 4.
-def run_experiment_with_nodes(
+def run_experiment(
     f,
     x_nodes,
-    degree,
-    mesh_type,
-    label=None,
-    grid_size=4000,
+    *,
+    grid_size=100,
     precision="single",
+    reference="interpolant",
+    interval=None,
+    mesh_type=None,
+    degree=None,
+    label=None,
 ):
+    """
+    Run a single interpolation experiment with pre-built nodes.
+
+    reference: "interpolant" = compare to BF1 polynomial in double;
+               "exact" = compare to f(x_eval) on the grid.
+    interval: optional (a, b) for evaluation grid; if None, use x_nodes.min/max.
+    """
     dtype_ref = np.float64
     dtype_approx = get_dtype(precision)
-    x_nodes = np.asarray(x_nodes, dtype=dtype_ref)
+    x_nodes = np.asarray(x_nodes, dtype=dtype_ref).ravel()
     n_nodes = x_nodes.size
 
-    # Prepare the data.
     f_values_double = np.asarray(f(x_nodes), dtype=dtype_ref).ravel()
-    f_values_single = f_values_double.astype(np.float32)
+    f_values_single = f_values_double.astype(dtype_approx)
     if f_values_double.size != n_nodes:
         raise ValueError("f(x_nodes) must return length equal to x_nodes")
 
-    # Create the grid.
-    a, b = float(x_nodes.min()), float(x_nodes.max())
+    if interval is not None:
+        a, b = float(interval[0]), float(interval[1])
+    else:
+        a, b = float(x_nodes.min()), float(x_nodes.max())
+
     x_eval = np.linspace(a, b, grid_size, dtype=dtype_ref)
     x_eval_approx = x_eval.astype(dtype_approx)
 
-    # Construct the reference polynomial (double precision).
-    p_exact = np.asarray(f(x_eval), dtype=dtype_ref).ravel()
+    gamma = barycentric_form1.compute_gamma(x_nodes, dtype_ref)
+    if reference == "interpolant":
+        p_ref = barycentric_form1.barycentric1_eval(
+            x_eval, x_nodes, gamma, f_values_double, dtype_ref
+        )
+    elif reference == "exact":
+        p_ref = np.asarray(f(x_eval), dtype=dtype_ref).ravel()
+    else:
+        raise ValueError(f"reference must be 'interpolant' or 'exact', got {reference!r}")
 
-    # Construct the interpolants (single precision): BF2 + Newton (three orderings).
     beta, y_single = barycentric_form2.setup_barycentric2_from_values(
         x_nodes, f_values_single, dtype_approx
     )
@@ -175,8 +109,6 @@ def run_experiment_with_nodes(
     )
     interpolants = {"BF2": p_bf2, **newton_interpolants}
 
-    # Conditioning (double).
-    gamma = barycentric_form1.compute_gamma(x_nodes, dtype_ref)
     kappa_xy = condition_numbers.kappa_xy(
         x_eval, x_nodes, gamma, f_values_double, dtype_ref
     )
@@ -184,20 +116,18 @@ def run_experiment_with_nodes(
     Lambda_n = statistics.lebesgue_constant(kappa_1)
     H_n = statistics.Hn(kappa_xy)
 
-    # Forward errors and stability ratios (unified bound: Lambda_n * eps * max|y|)
     eps = np.finfo(dtype_approx).eps
     forward_errors, stability_ratios, within_bound, bound = compute_forward_errors_and_ratios(
-        interpolants, p_exact, Lambda_n, eps, y_ref=f_values_double
+        interpolants, p_ref, Lambda_n, eps, y_ref=f_values_double
     )
     forward_error_vectors = {
-        name: np.abs(np.asarray(p_single, dtype=dtype_ref).ravel() - p_exact)
+        name: np.abs(np.asarray(p_single, dtype=dtype_ref).ravel() - p_ref)
         for name, p_single in interpolants.items()
     }
 
-    # Barycentric Form 2 Higham forward error bound (pointwise).
-    n = n_nodes - 1
+    n_degree = n_nodes - 1
     bf2_rel, bf2_bound_pt, bf2_ratio_pt, bf2_max_ratio = error_stability.verify_barycentric2_forward_bound(
-        p_bf2, p_exact, kappa_xy, kappa_1, n, eps
+        p_bf2, p_ref, kappa_xy, kappa_1, n_degree, eps
     )
 
     return {
@@ -207,11 +137,13 @@ def run_experiment_with_nodes(
         "forward_error_vectors": forward_error_vectors,
         "stability_ratios": stability_ratios,
         "within_bound": within_bound,
+        "bound": bound,
         "newton_max_dd": newton_max_dd,
         "x_eval": x_eval,
         "kappa_1": kappa_1,
         "kappa_xy": kappa_xy,
-        "p_exact": p_exact,
+        "p_ref": p_ref,
+        "p_exact": p_ref,
         "interpolants": interpolants,
         "label": label,
         "bf2_forward_bound": {
@@ -222,3 +154,30 @@ def run_experiment_with_nodes(
         },
     }
 
+
+# Runs the double loop over mesh_types and degree_range (n list). Return nested results.
+# Tasks 2 and 3.
+def run_task_sweep(config, f, interval, mesh_types=None):
+    a, b = interval
+    mesh_types = mesh_types or config.get("mesh_types", ["uniform", "cheb1", "cheb2"])
+    n_list = config["degree_range"]
+    grid_size = config.get("evaluation_grid_size", 100)
+    precision = config.get("precision", "single")
+    dtype_ref = np.float64
+
+    results = {}
+    for mesh_type in mesh_types:
+        results[mesh_type] = {}
+        for n in n_list:
+            x_nodes = meshes.build_mesh(mesh_type, a, b, n, dtype_ref)
+            results[mesh_type][n] = run_experiment(
+                f,
+                x_nodes,
+                grid_size=grid_size,
+                precision=precision,
+                reference="interpolant",
+                interval=(a, b),
+                mesh_type=mesh_type,
+                degree=n - 1,
+            )
+    return results
