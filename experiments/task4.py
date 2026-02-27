@@ -35,14 +35,7 @@ def run(args):
 
             # Canonical: interpolate with same n+1 nodes
             res = run_experiment.run_experiment(
-                f3,
-                x_nodes,
-                grid_size=grid_size,
-                precision=precision,
-                reference="exact",
-                mesh_type=mesh_type,
-                degree=n,
-                label="canonical",
+                f3, x_nodes, (a, b), grid_size=grid_size, precision=precision
             )
             results_canonical[mesh_type][n] = res
 
@@ -52,19 +45,11 @@ def run(args):
                 m_nodes = m + 1
                 x_large = meshes.build_mesh(mesh_type, a, b, m_nodes, np.float64)
                 res_over = run_experiment.run_experiment(
-                    f3,
-                    x_large,
-                    grid_size=grid_size,
-                    precision=precision,
-                    reference="exact",
-                    mesh_type=mesh_type,
-                    degree=m,
-                    label=f"overinterp_{m}",
+                    f3, x_large, (a, b), grid_size=grid_size, precision=precision
                 )
                 results_over[mesh_type][n][m] = res_over
 
     _print_table(results_canonical, results_over)
-    _print_ratios_table(results_canonical, results_over)
     _print_bf2_bound_table(results_canonical, results_over)
     _print_newton_max_dd_table(results_canonical, results_over)
     if getattr(args, "plot", False):
@@ -75,17 +60,16 @@ def run(args):
 
 
 def _print_table(results_canonical, results_over):
-    print("\nTask 4 (f3 = ℓ_n): canonical — Lambda_n, H_n, forward_errors, stability_ratio (BF2)")
+    print("\nTask 4 (f3 = ℓ_n): canonical — Lambda_n, H_n, forward_errors")
     print("-" * 90)
     for mesh_type in MESH_TYPES:
         print(f"  {mesh_type}:")
         for n in sorted(results_canonical[mesh_type].keys()):
             r = results_canonical[mesh_type][n]
             fe_bf2 = r["forward_errors"]["BF2"]
-            ratio_bf2 = r["stability_ratios"]["BF2"]
             print(
                 f"    n={n:2d}  Lambda_n={r['Lambda_n']:.10f}  H_n={r['H_n']:.10f}  "
-                f"fe_BF2={fe_bf2:.10f}  ratio_BF2={ratio_bf2:.10f}"
+                f"fe_BF2={fe_bf2:.10f}"
             )
             for form in ["Newton_inc", "Newton_dec", "Newton_Leja"]:
                 fe = r["forward_errors"][form]
@@ -101,31 +85,6 @@ def _print_table(results_canonical, results_over):
             r = results_over[mesh_type][n][m]
             fe_bf2 = r["forward_errors"]["BF2"]
             print(f"    n={n:2d} m={m:2d}  fe_BF2={fe_bf2:.10f}  Lambda_n={r['Lambda_n']:.10f}")
-    print()
-
-
-def _print_ratios_table(results_canonical, results_over):
-    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
-    w = 14
-    print("\nTask 4 (f3 = ℓ_n): stability_ratios (within_bound) — canonical")
-    print("-" * 120)
-    for mesh_type in MESH_TYPES:
-        print(f"  {mesh_type}:")
-        for n in sorted(results_canonical[mesh_type].keys()):
-            r = results_canonical[mesh_type][n]
-            parts = [f"ratio_{m}={r['stability_ratios'][m]:>{w}.10f} ({r['within_bound'][m]})" for m in methods]
-            print(f"    n={n:2d}  " + "  ".join(parts))
-    print("\nTask 4 (f3 = ℓ_n): stability_ratios (within_bound) — over-interpolation (m=n+5)")
-    print("-" * 120)
-    for mesh_type in MESH_TYPES:
-        print(f"  {mesh_type}:")
-        for n in sorted(results_over[mesh_type].keys()):
-            m = n + 5
-            if m not in results_over[mesh_type][n]:
-                continue
-            r = results_over[mesh_type][n][m]
-            parts = [f"ratio_{meth}={r['stability_ratios'][meth]:>{w}.10f} ({r['within_bound'][meth]})" for meth in methods]
-            print(f"    n={n:2d} m={m:2d}  " + "  ".join(parts))
     print()
 
 
