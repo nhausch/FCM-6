@@ -21,6 +21,7 @@ def run(args):
         "precision": getattr(args, "precision", "single"),
     }
     results = run_experiment.run_task_sweep(config, f1.func, (a, b))
+
     _print_table(results)
     _print_bf2_bound_table(results)
     _print_newton_max_dd_table(results)

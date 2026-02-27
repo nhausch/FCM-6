@@ -122,6 +122,10 @@ def run_experiment(f, x_nodes, interval, grid_size=100, precision="single"):
         p_bf2, p_exact, kappa_xy, kappa_1, n_degree, eps
     )
 
+    # Approximation error (convergence to true f): |f(x) - p_exact(x)|_infty
+    true_values = np.asarray(f(x_eval), dtype=np.float64).ravel()
+    approx_error = float(np.max(np.abs(true_values - p_exact)))
+
     return {
         "Lambda_n": Lambda_n,
         "H_n": H_n,
@@ -133,6 +137,7 @@ def run_experiment(f, x_nodes, interval, grid_size=100, precision="single"):
         "kappa_1": kappa_1,
         "p_exact": p_exact,
         "x_eval": x_eval,
+        "approx_error": approx_error,
     }
 
 

@@ -27,6 +27,7 @@ def run(args):
     _print_table(results)
     _print_bf2_bound_table(results)
     _print_newton_max_dd_table(results)
+
     if getattr(args, "plot", False):
         output_dir = getattr(args, "output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
