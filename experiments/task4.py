@@ -18,7 +18,7 @@ OVER_INTERP_OFFSETS = [5, 10]  # m = n + 5, n + 10
 def run(args):
     make_f3, a_default, b_default = get(4)
     a, b = args.interval if hasattr(args, "interval") and args.interval else (a_default, b_default)
-    grid_size = getattr(args, "evaluation_grid_size", 4000)
+    grid_size = getattr(args, "evaluation_grid_size", 100)
     precision = getattr(args, "precision", "single")
     output_dir = getattr(args, "output_dir", "output")
 
@@ -54,6 +54,11 @@ def run(args):
     _print_newton_max_dd_table(results_canonical, results_over)
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
+        from utils.plotting import plot_lambda_vs_n, plot_Hn_vs_n
+        plot_lambda_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_lambda_n.png"), title="Task 4 (f3): Lambda_n vs n")
+        print(f"Saved plot to {os.path.join(output_dir, 'task4_lambda_n.png')}")
+        plot_Hn_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_Hn.png"), title="Task 4 (f3): H_n vs n")
+        print(f"Saved plot to {os.path.join(output_dir, 'task4_Hn.png')}")
         _plot_n29_higham(results_canonical, output_dir)
         _plot_relative_error_30pt(results_canonical, output_dir)
     return {"canonical": results_canonical, "over": results_over}

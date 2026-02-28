@@ -33,8 +33,44 @@ def run(args):
     if getattr(args, "plot", False):
         output_dir = getattr(args, "output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
+        mesh_list = list(results.keys())
+        methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
         try:
-            from utils.plotting import plot_convergence
+            from utils.plotting import (
+                plot_convergence,
+                plot_lambda_vs_n,
+                plot_Hn_vs_n,
+                plot_forward_error_vs_degree,
+                plot_relative_error_vs_x,
+                plot_interpolant_vs_function,
+            )
+            # Plot 5 & 6: Lambda_n and H_n vs n
+            plot_lambda_vs_n(results, mesh_list, os.path.join(output_dir, "task5_lambda_n.png"), title="Task 5 (f4): Lambda_n vs n")
+            print(f"Saved plot to {os.path.join(output_dir, 'task5_lambda_n.png')}")
+            plot_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task5_Hn.png"), title="Task 5 (f4): H_n vs n")
+            print(f"Saved plot to {os.path.join(output_dir, 'task5_Hn.png')}")
+            # Plot 7 & 8: Higham-style relative error vs x for uniform and cheb1 at n=20, n=40
+            for mesh_type in ["uniform", "cheb1"]:
+                if mesh_type not in results:
+                    continue
+                for n in [20, 40]:
+                    if n not in results[mesh_type]:
+                        continue
+                    r = results[mesh_type][n]
+                    path = os.path.join(output_dir, f"task5_relative_error_{mesh_type}_n{n}.png")
+                    plot_relative_error_vs_x(
+                        r["x_eval"],
+                        r["p_exact"],
+                        r["forward_error_vectors"],
+                        methods,
+                        path,
+                        title=f"Task 5 (f4): relative error vs x, {mesh_type}, n={n}",
+                    )
+                    print(f"Saved plot to {path}")
+            # Plot 9: Forward error vs n (BF2)
+            plot_forward_error_vs_degree(results, mesh_list, os.path.join(output_dir, "task5_forward_error.png"), method="BF2")
+            print(f"Saved plot to {os.path.join(output_dir, 'task5_forward_error.png')}")
+            # Plot 10: Convergence (existing)
             n_list_sorted = sorted(results["uniform"].keys())
             errors_per_mesh = {
                 mesh_type: (
@@ -46,6 +82,24 @@ def run(args):
             path = os.path.join(output_dir, "task5_convergence.png")
             plot_convergence(n_list_sorted, errors_per_mesh, path)
             print(f"Saved plot to {path}")
+            # Plot 11: p_n(x) vs f4(x) for uniform and cheb1, n=10, 20, 40
+            for mesh_type in ["uniform", "cheb1"]:
+                if mesh_type not in results:
+                    continue
+                ns_plot = [10, 20, 40]
+                if not all(n in results[mesh_type] for n in ns_plot):
+                    continue
+                x_eval = results[mesh_type][ns_plot[0]]["x_eval"]
+                f_ref = np.asarray(f4.func(x_eval)).ravel()
+                curves = {"f4": f_ref}
+                for n in ns_plot:
+                    curves[f"n={n}"] = results[mesh_type][n]["p_exact"]
+                path = os.path.join(output_dir, f"task5_interpolant_vs_f4_{mesh_type}.png")
+                plot_interpolant_vs_function(
+                    x_eval, f_ref, curves, path,
+                    title=f"Task 5 (f4): p_n(x) vs f4(x), {mesh_type}",
+                )
+                print(f"Saved plot to {path}")
         except Exception as e:
             print(f"Plotting failed: {e}")
 

@@ -24,7 +24,7 @@ def plot_forward_error_vs_degree(results, mesh_types, path, method="BF2"):
             err_vals = [results[mesh_type][n]["forward_error_sup"] for n in n_vals]
             plt.semilogy(n_vals, err_vals, "o-", label=mesh_type)
     plt.xlabel("n (number of nodes)")
-    plt.ylabel("forward_error")
+    plt.ylabel("max forward_error")
     plt.legend()
     plt.grid(True, which="both", linestyle="--", alpha=0.7)
     plt.tight_layout()
@@ -70,6 +70,65 @@ def plot_convergence(n_list, errors_per_mesh, path):
         plt.semilogy(ns, errs, "o-", label=mesh_type, markersize=3)
     plt.xlabel("n (number of nodes)")
     plt.ylabel("sup_norm(p_n - f)")
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(path, dpi=150)
+    plt.close()
+
+
+def plot_lambda_vs_n(results, mesh_types, path, title=None):
+    """Plot Lebesgue constant Lambda_n vs n for each mesh type (semilog y)."""
+    plt.figure()
+    for mesh_type in mesh_types:
+        if mesh_type not in results:
+            continue
+        n_vals = sorted(results[mesh_type].keys())
+        lambda_vals = [results[mesh_type][n]["Lambda_n"] for n in n_vals]
+        plt.semilogy(n_vals, lambda_vals, "o-", label=mesh_type)
+    plt.xlabel("n (number of nodes)")
+    plt.ylabel("Lambda_n")
+    if title:
+        plt.title(title)
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(path, dpi=150)
+    plt.close()
+
+
+def plot_Hn_vs_n(results, mesh_types, path, title=None):
+    """Plot H_n vs n for each mesh type (semilog y)."""
+    plt.figure()
+    for mesh_type in mesh_types:
+        if mesh_type not in results:
+            continue
+        n_vals = sorted(results[mesh_type].keys())
+        h_vals = [results[mesh_type][n]["H_n"] for n in n_vals]
+        plt.semilogy(n_vals, h_vals, "o-", label=mesh_type)
+    plt.xlabel("n (number of nodes)")
+    plt.ylabel("H_n")
+    if title:
+        plt.title(title)
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", alpha=0.7)
+    plt.tight_layout()
+    plt.savefig(path, dpi=150)
+    plt.close()
+
+
+def plot_interpolant_vs_function(x_eval, f_ref, curves, path, title=None):
+    """Plot true function and interpolants p_n(x) vs x (linear scale). curves: dict label -> 1D array."""
+    import numpy as np
+    x_eval = np.asarray(x_eval).ravel()
+    plt.figure(figsize=(8, 5))
+    for label, y_vals in curves.items():
+        y_vals = np.asarray(y_vals).ravel()
+        plt.plot(x_eval, y_vals, label=label, alpha=0.8)
+    plt.xlabel("x")
+    plt.ylabel("value")
+    if title:
+        plt.title(title)
     plt.legend()
     plt.grid(True, which="both", linestyle="--", alpha=0.7)
     plt.tight_layout()

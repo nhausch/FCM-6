@@ -29,7 +29,11 @@ def run(args):
         output_dir = getattr(args, "output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
         try:
-            from utils.plotting import plot_forward_error_vs_degree
+            from utils.plotting import plot_forward_error_vs_degree, plot_lambda_vs_n, plot_Hn_vs_n
+            plot_lambda_vs_n(results, list(results.keys()), os.path.join(output_dir, "task2_lambda_n.png"), title="Task 2 (f1): Lambda_n vs n")
+            print(f"Saved plot to {os.path.join(output_dir, 'task2_lambda_n.png')}")
+            plot_Hn_vs_n(results, list(results.keys()), os.path.join(output_dir, "task2_Hn.png"), title="Task 2 (f1): H_n vs n")
+            print(f"Saved plot to {os.path.join(output_dir, 'task2_Hn.png')}")
             path = os.path.join(output_dir, "task2_forward_error.png")
             plot_forward_error_vs_degree(results, list(results.keys()), path)
             print(f"Saved plot to {path}")
