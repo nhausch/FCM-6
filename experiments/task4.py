@@ -54,11 +54,9 @@ def run(args):
     _print_newton_max_dd_table(results_canonical, results_over)
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
-        from utils.plotting import plot_lambda_vs_n, plot_Hn_vs_n
-        plot_lambda_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_lambda_n.png"), title="Task 4 (f3): Lambda_n vs n")
-        print(f"Saved plot to {os.path.join(output_dir, 'task4_lambda_n.png')}")
-        plot_Hn_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_Hn.png"), title="Task 4 (f3): H_n vs n")
-        print(f"Saved plot to {os.path.join(output_dir, 'task4_Hn.png')}")
+        from utils.plotting import plot_lambda_and_Hn_vs_n, plot_relative_error_30pt_grid
+        plot_lambda_and_Hn_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_lambda_n_Hn.png"), title="Task 4 (f3): Lambda_n and H_n vs n")
+        print(f"Saved plot to {os.path.join(output_dir, 'task4_lambda_n_Hn.png')}")
         _plot_n29_higham(results_canonical, output_dir)
         _plot_relative_error_30pt(results_canonical, output_dir)
     return {"canonical": results_canonical, "over": results_over}
@@ -192,20 +190,22 @@ def _plot_n29_higham(results_canonical, output_dir):
 
 
 def _plot_relative_error_30pt(results_canonical, output_dir):
-    """Relative error vs x (Higham-style) for 30 points: uniform and Chebyshev first kind."""
-    from utils.plotting import plot_relative_error_vs_x
+    """Relative error vs x (Higham-style) for 30 points: uniform and Chebyshev first kind, one figure."""
+    from utils.plotting import plot_relative_error_30pt_grid
 
     methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+    entries = []
     for mesh_type in ["uniform", "cheb1"]:
         if mesh_type not in results_canonical or 29 not in results_canonical[mesh_type]:
             continue
         r = results_canonical[mesh_type][29]
-        x_eval = r["x_eval"]
-        p_ref = r["p_exact"]
-        absolute_errors_by_method = r["forward_error_vectors"]
-        path = os.path.join(output_dir, f"task4_relative_error_30pt_{mesh_type}.png")
-        title = f"Relative error in p_n(x), 30 nodes, {mesh_type} (f3 = ℓ_n)"
-        plot_relative_error_vs_x(
-            x_eval, p_ref, absolute_errors_by_method, methods, path, title=title
-        )
+        entries.append((
+            r["x_eval"],
+            r["p_exact"],
+            r["forward_error_vectors"],
+            f"Relative error in p_n(x), 30 nodes, {mesh_type} (f3 = ℓ_n)",
+        ))
+    if len(entries) == 2:
+        path = os.path.join(output_dir, "task4_relative_error_30pt.png")
+        plot_relative_error_30pt_grid(entries, methods, path, title="Task 4 (f3): relative error vs x, 30 nodes")
         print(f"Saved plot to {path}")

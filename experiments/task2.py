@@ -29,26 +29,25 @@ def run(args):
         output_dir = getattr(args, "output_dir", "output")
         os.makedirs(output_dir, exist_ok=True)
         try:
-            from utils.plotting import plot_forward_error_vs_degree, plot_lambda_vs_n, plot_Hn_vs_n
-            plot_lambda_vs_n(results, list(results.keys()), os.path.join(output_dir, "task2_lambda_n.png"), title="Task 2 (f1): Lambda_n vs n")
-            print(f"Saved plot to {os.path.join(output_dir, 'task2_lambda_n.png')}")
-            plot_Hn_vs_n(results, list(results.keys()), os.path.join(output_dir, "task2_Hn.png"), title="Task 2 (f1): H_n vs n")
-            print(f"Saved plot to {os.path.join(output_dir, 'task2_Hn.png')}")
-            path = os.path.join(output_dir, "task2_forward_error.png")
-            plot_forward_error_vs_degree(results, list(results.keys()), path)
-            print(f"Saved plot to {path}")
-            for method in ["Newton_inc", "Newton_dec", "Newton_Leja"]:
-                path_newton = os.path.join(output_dir, f"task2_forward_error_{method}.png")
-                plot_forward_error_vs_degree(results, list(results.keys()), path_newton, method=method)
-                print(f"Saved plot to {path_newton}")
+            from utils.plotting import (
+                plot_forward_error_2x2,
+                plot_lambda_and_Hn_vs_n,
+                plot_relative_error_30pt_grid,
+            )
+            mesh_list = list(results.keys())
+            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task2_lambda_n_Hn.png"), title="f_1: Lambda_n and H_n vs n")
+            print(f"Saved plot to {os.path.join(output_dir, 'task2_lambda_n_Hn.png')}")
+            path_fe = os.path.join(output_dir, "task2_forward_error.png")
+            plot_forward_error_2x2(results, mesh_list, path_fe, title="f_1")
+            print(f"Saved plot to {path_fe}")
         except Exception as e:
             print(f"Plotting failed: {e}")
         try:
-            import numpy as np
             from interpolation import meshes
-            from utils.plotting import plot_relative_error_vs_x
+            from utils.plotting import plot_relative_error_30pt_grid
             n_plot = 30
             methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+            entries = []
             for mesh_type in ["uniform", "cheb1"]:
                 x_nodes = meshes.build_mesh(mesh_type, a, b, n_plot, np.float64)
                 res = run_experiment.run_experiment(
@@ -58,36 +57,35 @@ def run(args):
                     grid_size=config["evaluation_grid_size"],
                     precision=config["precision"],
                 )
-                path = os.path.join(output_dir, f"task2_relative_error_30pt_{mesh_type}.png")
-                plot_relative_error_vs_x(
+                entries.append((
                     res["x_eval"],
                     res["p_exact"],
                     res["forward_error_vectors"],
-                    methods,
-                    path,
-                    title=f"Relative error in p_n(x), 30 nodes, {mesh_type} (f1)",
-                )
-                print(f"Saved plot to {path}")
+                    f"Relative error in p_n(x), 30 nodes, {mesh_type} (f1)",
+                ))
+            path_rel = os.path.join(output_dir, "task2_relative_error_30pt.png")
+            plot_relative_error_30pt_grid(entries, methods, path_rel, title="f_1: relative error vs x, 30 nodes")
+            print(f"Saved plot to {path_rel}")
         except Exception as e:
             print(f"Relative-error plot failed: {e}")
     return results
 
 def _print_table(results):
     methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
-    print("\nTask 2 (f1): forward_errors / Lambda_n (per method)")
+    print("\nf_1: forward_errors / Lambda_n, H_n (per method)")
     print("-" * 85)
     for mesh_type in results:
         print(f"  {mesh_type}:")
         for n in sorted(results[mesh_type].keys()):
             r = results[mesh_type][n]
             fe_str = "  ".join(f"fe_{m}={r['forward_errors'][m]:.10f}" for m in methods)
-            print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.10f}  {fe_str}")
+            print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.10f}  H_n={r['H_n']:.10f}  {fe_str}")
     print()
 
 
 def _print_bf2_bound_table(results):
     w = 14
-    print("\nTask 2 (f1): BF2 forward error bound")
+    print("\nf_1: BF2 forward error bound")
     print("-" * 100)
     for mesh_type in results:
         print(f"  {mesh_type}:")
@@ -104,7 +102,7 @@ def _print_bf2_bound_table(results):
 def _print_newton_max_dd_table(results):
     newton_orders = ["Newton_inc", "Newton_dec", "Newton_Leja"]
     w = 14
-    print("\nTask 2 (f1): Newton divided differences max |coeff|")
+    print("\nf_1: Newton divided differences max |coeff|")
     print("-" * 80)
     for mesh_type in results:
         print(f"  {mesh_type}:")

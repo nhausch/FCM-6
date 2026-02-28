@@ -38,17 +38,14 @@ def run(args):
         try:
             from utils.plotting import (
                 plot_convergence,
-                plot_lambda_vs_n,
-                plot_Hn_vs_n,
+                plot_lambda_and_Hn_vs_n,
                 plot_forward_error_vs_degree,
                 plot_relative_error_vs_x,
                 plot_interpolant_vs_function,
             )
-            # Plot 5 & 6: Lambda_n and H_n vs n
-            plot_lambda_vs_n(results, mesh_list, os.path.join(output_dir, "task5_lambda_n.png"), title="Task 5 (f4): Lambda_n vs n")
-            print(f"Saved plot to {os.path.join(output_dir, 'task5_lambda_n.png')}")
-            plot_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task5_Hn.png"), title="Task 5 (f4): H_n vs n")
-            print(f"Saved plot to {os.path.join(output_dir, 'task5_Hn.png')}")
+            # Plot 5 & 6: Lambda_n and H_n vs n (one figure)
+            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task5_lambda_n_Hn.png"), title="Task 5 (f4): Lambda_n and H_n vs n")
+            print(f"Saved plot to {os.path.join(output_dir, 'task5_lambda_n_Hn.png')}")
             # Plot 7 & 8: Higham-style relative error vs x for uniform and cheb1 at n=20, n=40
             for mesh_type in ["uniform", "cheb1"]:
                 if mesh_type not in results:

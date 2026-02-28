@@ -5,4 +5,4 @@ import numpy as np
 def func(x):
     return (x - 2.0) ** 9
 
-interval = (1.0, 3.0)
+interval = (0.0, 4.0)
