@@ -35,10 +35,10 @@ def run(args):
                 plot_relative_error_30pt_grid,
             )
             mesh_list = list(results.keys())
-            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task2_lambda_n_Hn.png"), title="f_1: Lambda_n and H_n vs n")
+            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task2_lambda_n_Hn.png"))  # title="f_1: Lambda_n and H_n"
             print(f"Saved plot to {os.path.join(output_dir, 'task2_lambda_n_Hn.png')}")
             path_fe = os.path.join(output_dir, "task2_forward_error.png")
-            plot_forward_error_2x2(results, mesh_list, path_fe, title="f_1")
+            plot_forward_error_2x2(results, mesh_list, path_fe)  # title="f_1: Forward Error"
             print(f"Saved plot to {path_fe}")
         except Exception as e:
             print(f"Plotting failed: {e}")
@@ -61,10 +61,10 @@ def run(args):
                     res["x_eval"],
                     res["p_exact"],
                     res["forward_error_vectors"],
-                    f"Relative error in p_n(x), 30 nodes, {mesh_type} (f1)",
+                    f"{mesh_type}",
                 ))
             path_rel = os.path.join(output_dir, "task2_relative_error_30pt.png")
-            plot_relative_error_30pt_grid(entries, methods, path_rel, title="f_1: relative error vs x, 30 nodes")
+            plot_relative_error_30pt_grid(entries, methods, path_rel)  # title="f_1: relative error vs x (n = 30)"
             print(f"Saved plot to {path_rel}")
         except Exception as e:
             print(f"Relative-error plot failed: {e}")

@@ -67,8 +67,8 @@ def plot_relative_error_vs_x(x_eval, p_ref, absolute_errors_by_method, methods, 
         target.semilogy(x_eval, rel_err, label=method, alpha=0.8)
     target.set_xlabel("x")
     target.set_ylabel("Relative error")
-    if title:
-        target.set_title(title)
+    # if title:
+    #     target.set_title(title)
     target.legend()
     target.grid(True, which="both", linestyle="--", alpha=0.7)
     if ax is None:
@@ -110,8 +110,8 @@ def plot_lambda_vs_n(results, mesh_types, path=None, title=None, ax=None):
         target.semilogy(n_vals, lambda_vals, "o-", label=mesh_type)
     target.set_xlabel("n")
     target.set_ylabel("Lambda_n")
-    if title:
-        target.set_title(title)
+    # if title:
+    #     target.set_title(title)
     target.legend()
     target.grid(True, which="both", linestyle="--", alpha=0.7)
     if ax is None:
@@ -137,8 +137,8 @@ def plot_Hn_vs_n(results, mesh_types, path=None, title=None, ax=None):
         target.semilogy(n_vals, h_vals, "o-", label=mesh_type)
     target.set_xlabel("n")
     target.set_ylabel("H_n")
-    if title:
-        target.set_title(title)
+    # if title:
+    #     target.set_title(title)
     target.legend()
     target.grid(True, which="both", linestyle="--", alpha=0.7)
     if ax is None:
@@ -157,13 +157,21 @@ def plot_interpolant_vs_function(x_eval, f_ref, curves, path, title=None):
         plt.plot(x_eval, y_vals, label=label, alpha=0.8)
     plt.xlabel("x")
     plt.ylabel("value")
-    if title:
-        plt.title(title)
+    # if title:
+    #     plt.title(title)
     plt.legend()
     plt.grid(True, which="both", linestyle="--", alpha=0.7)
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()
+
+
+_METHOD_LABELS = {
+    "BF2": "Barycentric 2",
+    "Newton_inc": "Newton Increasing",
+    "Newton_dec": "Newton Decreasing",
+    "Newton_Leja": "Newton Leja",
+}
 
 
 def plot_forward_error_2x2(results, mesh_types, path, title=None):
@@ -173,9 +181,9 @@ def plot_forward_error_2x2(results, mesh_types, path, title=None):
     for idx, method in enumerate(methods):
         ax = axes.flat[idx]
         plot_forward_error_vs_degree(results, mesh_types, path=None, method=method, ax=ax)
-        ax.set_title(method)
-    if title:
-        fig.suptitle(title)
+        ax.set_title(_METHOD_LABELS.get(method, method))
+    # if title:
+    #     fig.suptitle(title)
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()
@@ -185,9 +193,10 @@ def plot_lambda_and_Hn_vs_n(results, mesh_types, path, title=None):
     """One figure with 2 rows: Lambda_n vs n (top), H_n vs n (bottom)."""
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(8, 8))
     plot_lambda_vs_n(results, mesh_types, path=None, title=None, ax=axes[0])
+    axes[0].set_xlabel("")
     plot_Hn_vs_n(results, mesh_types, path=None, title=None, ax=axes[1])
-    if title:
-        fig.suptitle(title)
+    # if title:
+    #     fig.suptitle(title)
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()
@@ -198,8 +207,9 @@ def plot_relative_error_30pt_grid(entries, methods, path, title=None):
     fig, axes = plt.subplots(2, 1, sharex=True, figsize=(8, 8))
     for ax, (x_eval, p_ref, errs, stitle) in zip(axes, entries):
         plot_relative_error_vs_x(x_eval, p_ref, errs, methods, path=None, title=stitle, ax=ax)
-    if title:
-        fig.suptitle(title)
+    axes[0].set_xlabel("")
+    # if title:
+    #     fig.suptitle(title)
     plt.tight_layout()
     plt.savefig(path, dpi=150)
     plt.close()

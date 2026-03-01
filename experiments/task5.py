@@ -44,7 +44,7 @@ def run(args):
                 plot_interpolant_vs_function,
             )
             # Plot 5 & 6: Lambda_n and H_n vs n (one figure)
-            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task5_lambda_n_Hn.png"), title="Task 5 (f4): Lambda_n and H_n vs n")
+            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task5_lambda_n_Hn.png"))  # title="Task 5 (f4): Lambda_n and H_n vs n"
             print(f"Saved plot to {os.path.join(output_dir, 'task5_lambda_n_Hn.png')}")
             # Plot 7 & 8: Higham-style relative error vs x for uniform and cheb1 at n=20, n=40
             for mesh_type in ["uniform", "cheb1"]:
@@ -61,7 +61,7 @@ def run(args):
                         r["forward_error_vectors"],
                         methods,
                         path,
-                        title=f"Task 5 (f4): relative error vs x, {mesh_type}, n={n}",
+                        # title=f"Task 5 (f4): relative error vs x, {mesh_type}, n={n}",
                     )
                     print(f"Saved plot to {path}")
             # Plot 9: Forward error vs n (BF2)
@@ -94,7 +94,7 @@ def run(args):
                 path = os.path.join(output_dir, f"task5_interpolant_vs_f4_{mesh_type}.png")
                 plot_interpolant_vs_function(
                     x_eval, f_ref, curves, path,
-                    title=f"Task 5 (f4): p_n(x) vs f4(x), {mesh_type}",
+                    # title=f"Task 5 (f4): p_n(x) vs f4(x), {mesh_type}",
                 )
                 print(f"Saved plot to {path}")
         except Exception as e:

@@ -55,7 +55,7 @@ def run(args):
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
         from utils.plotting import plot_lambda_and_Hn_vs_n, plot_relative_error_30pt_grid
-        plot_lambda_and_Hn_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_lambda_n_Hn.png"), title="Task 4 (f3): Lambda_n and H_n vs n")
+        plot_lambda_and_Hn_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_lambda_n_Hn.png"))  # title="Task 4 (f3): Lambda_n and H_n vs n"
         print(f"Saved plot to {os.path.join(output_dir, 'task4_lambda_n_Hn.png')}")
         _plot_n29_higham(results_canonical, output_dir)
         _plot_relative_error_30pt(results_canonical, output_dir)
@@ -170,7 +170,7 @@ def _plot_n29_higham(results_canonical, output_dir):
         axes[0].set_ylabel(r"$\log_{10}$ condition")
         axes[0].legend()
         axes[0].grid(True, which="both", linestyle="--", alpha=0.7)
-        axes[0].set_title(f"Task 4 (f3 = ℓ_n), n=29, {mesh_type}")
+        # axes[0].set_title(f"Task 4 (f3 = ℓ_n), n=29, {mesh_type}")
 
         err_bf2 = r["forward_error_vectors"]["BF2"]
         log_err = np.log10(np.maximum(err_bf2, eps))
@@ -207,5 +207,5 @@ def _plot_relative_error_30pt(results_canonical, output_dir):
         ))
     if len(entries) == 2:
         path = os.path.join(output_dir, "task4_relative_error_30pt.png")
-        plot_relative_error_30pt_grid(entries, methods, path, title="Task 4 (f3): relative error vs x, 30 nodes")
+        plot_relative_error_30pt_grid(entries, methods, path)  # title="Task 4 (f3): relative error vs x, 30 nodes"
         print(f"Saved plot to {path}")
