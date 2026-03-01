@@ -1,4 +1,4 @@
-"""Task 4: f3(x) = ℓ_n(x). Parameter sweep over mesh types and degree; canonical and over-interpolation."""
+"""Task 4: f3(x) = ℓ_n(x). Parameter sweep over mesh types and interpolant degree (mirrors Task 3)."""
 
 import os
 
@@ -9,207 +9,122 @@ from interpolation import meshes
 from . import run_experiment
 
 
-# Degrees: at least two > 20, include n=29 (Higham).
-N_VALUES = [21, 29, 35]
 MESH_TYPES = ["uniform", "cheb1", "cheb2"]
-OVER_INTERP_OFFSETS = [5, 10]  # m = n + 5, n + 10
 
 
 def run(args):
     make_f3, a_default, b_default = get(4)
     a, b = args.interval if hasattr(args, "interval") and args.interval else (a_default, b_default)
+    n_f3 = getattr(args, "f3_degree", 29)
+    degree_min = getattr(args, "degree_min", 5)
+    degree_max = getattr(args, "degree_max", 30)
+    n_list = list(range(degree_min, degree_max + 1))
     grid_size = getattr(args, "evaluation_grid_size", 100)
     precision = getattr(args, "precision", "single")
     output_dir = getattr(args, "output_dir", "output")
 
-    results_canonical = {}
-    results_over = {}
-
+    results = {}
     for mesh_type in MESH_TYPES:
-        results_canonical[mesh_type] = {}
-        results_over[mesh_type] = {}
-        for n in N_VALUES:
-            n_nodes = n + 1
-            x_nodes = meshes.build_mesh(mesh_type, a, b, n_nodes, np.float64)
-            f3, _interval, _roots, _denom = make_f3(x_nodes)
-
-            # Canonical: interpolate with same n+1 nodes
+        results[mesh_type] = {}
+        x_nodes_f3 = meshes.build_mesh(mesh_type, a, b, n_f3 + 1, np.float64)
+        f3, _interval, _roots, _denom = make_f3(x_nodes_f3)
+        for n in n_list:
+            x_nodes = meshes.build_mesh(mesh_type, a, b, n, np.float64)
             res = run_experiment.run_experiment(
                 f3, x_nodes, (a, b), grid_size=grid_size, precision=precision
             )
-            results_canonical[mesh_type][n] = res
+            results[mesh_type][n] = res
 
-            # Over-interpolation: same f3, larger mesh
-            results_over[mesh_type][n] = {}
-            for m in [n + d for d in OVER_INTERP_OFFSETS]:
-                m_nodes = m + 1
-                x_large = meshes.build_mesh(mesh_type, a, b, m_nodes, np.float64)
-                res_over = run_experiment.run_experiment(
-                    f3, x_large, (a, b), grid_size=grid_size, precision=precision
-                )
-                results_over[mesh_type][n][m] = res_over
+    _print_table(results)
+    _print_bf2_bound_table(results)
+    _print_newton_max_dd_table(results)
 
-    _print_table(results_canonical, results_over)
-    _print_bf2_bound_table(results_canonical, results_over)
-    _print_newton_max_dd_table(results_canonical, results_over)
     if getattr(args, "plot", False):
         os.makedirs(output_dir, exist_ok=True)
-        from utils.plotting import plot_lambda_and_Hn_vs_n, plot_relative_error_30pt_grid
-        plot_lambda_and_Hn_vs_n(results_canonical, MESH_TYPES, os.path.join(output_dir, "task4_lambda_n_Hn.png"))  # title="Task 4 (f3): Lambda_n and H_n vs n"
-        print(f"Saved plot to {os.path.join(output_dir, 'task4_lambda_n_Hn.png')}")
-        _plot_n29_higham(results_canonical, output_dir)
-        _plot_relative_error_30pt(results_canonical, output_dir)
-    return {"canonical": results_canonical, "over": results_over}
-
-
-def _print_table(results_canonical, results_over):
-    print("\nTask 4 (f3 = ℓ_n): canonical — Lambda_n, H_n, forward_errors")
-    print("-" * 90)
-    for mesh_type in MESH_TYPES:
-        print(f"  {mesh_type}:")
-        for n in sorted(results_canonical[mesh_type].keys()):
-            r = results_canonical[mesh_type][n]
-            fe_bf2 = r["forward_errors"]["BF2"]
-            print(
-                f"    n={n:2d}  Lambda_n={r['Lambda_n']:.10f}  H_n={r['H_n']:.10f}  "
-                f"fe_BF2={fe_bf2:.10f}"
+        config = {
+            "evaluation_grid_size": grid_size,
+            "precision": precision,
+        }
+        try:
+            from utils.plotting import (
+                plot_forward_error_2x2,
+                plot_lambda_and_Hn_vs_n,
+                plot_relative_error_30pt_grid,
             )
-            for form in ["Newton_inc", "Newton_dec", "Newton_Leja"]:
-                fe = r["forward_errors"][form]
-                print(f"           fe_{form}={fe:.10f}")
-    print("\nTask 4 (f3): over-interpolation (sample m=n+5)")
-    print("-" * 60)
-    for mesh_type in MESH_TYPES:
+            mesh_list = list(results.keys())
+            plot_lambda_and_Hn_vs_n(results, mesh_list, os.path.join(output_dir, "task4_lambda_n_Hn.png"))
+            print(f"Saved plot to {os.path.join(output_dir, 'task4_lambda_n_Hn.png')}")
+            path_fe = os.path.join(output_dir, "task4_forward_error.png")
+            plot_forward_error_2x2(results, mesh_list, path_fe)
+            print(f"Saved plot to {path_fe}")
+        except Exception as e:
+            print(f"Plotting failed: {e}")
+        try:
+            from utils.plotting import plot_relative_error_30pt_grid
+            n_plot = 30
+            methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+            entries = []
+            for mesh_type in ["uniform", "cheb1"]:
+                x_nodes_f3 = meshes.build_mesh(mesh_type, a, b, n_f3 + 1, np.float64)
+                f3, _, _, _ = make_f3(x_nodes_f3)
+                x_nodes = meshes.build_mesh(mesh_type, a, b, n_plot, np.float64)
+                res = run_experiment.run_experiment(
+                    f3, x_nodes, (a, b), grid_size=config["evaluation_grid_size"], precision=config["precision"]
+                )
+                entries.append((
+                    res["x_eval"],
+                    res["p_exact"],
+                    res["forward_error_vectors"],
+                    f"Relative error in p_n(x), 30 nodes, {mesh_type} (f3 = ℓ_n)",
+                ))
+            path_rel = os.path.join(output_dir, "task4_relative_error_30pt.png")
+            plot_relative_error_30pt_grid(entries, methods, path_rel)
+            print(f"Saved plot to {path_rel}")
+        except Exception as e:
+            print(f"Relative-error plot failed: {e}")
+    return results
+
+
+def _print_table(results):
+    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
+    print("\nTask 4 (f3 = ℓ_n): forward_errors / Lambda_n, H_n (per method)")
+    print("-" * 85)
+    for mesh_type in results:
         print(f"  {mesh_type}:")
-        for n in sorted(results_over[mesh_type].keys()):
-            m = n + 5
-            if m not in results_over[mesh_type][n]:
-                continue
-            r = results_over[mesh_type][n][m]
-            fe_bf2 = r["forward_errors"]["BF2"]
-            print(f"    n={n:2d} m={m:2d}  fe_BF2={fe_bf2:.10f}  Lambda_n={r['Lambda_n']:.10f}")
+        for n in sorted(results[mesh_type].keys()):
+            r = results[mesh_type][n]
+            fe_str = "  ".join(f"fe_{m}={r['forward_errors'][m]:.10f}" for m in methods)
+            print(f"    n={n:3d}  Lambda_n={r['Lambda_n']:.10f}  H_n={r['H_n']:.10f}  {fe_str}")
     print()
 
 
-def _print_bf2_bound_table(results_canonical, results_over):
+def _print_bf2_bound_table(results):
     w = 14
-    print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound — canonical")
+    print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound")
     print("-" * 120)
-    for mesh_type in MESH_TYPES:
+    for mesh_type in results:
         print(f"  {mesh_type}:")
-        for n in sorted(results_canonical[mesh_type].keys()):
-            r = results_canonical[mesh_type][n]
+        for n in sorted(results[mesh_type].keys()):
+            r = results[mesh_type][n]
             bf2 = r["bf2_forward_bound"]
             bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
             rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
             max_ratio = float(bf2["max_ratio"])
             fe_bf2 = r["forward_errors"]["BF2"]
             within_bound = fe_bf2 <= bound_max
-            print(f"    n={n:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}  within_bf2_bound={within_bound}")
-    print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound — over-interpolation (m=n+5)")
-    print("-" * 120)
-    for mesh_type in MESH_TYPES:
-        print(f"  {mesh_type}:")
-        for n in sorted(results_over[mesh_type].keys()):
-            m = n + 5
-            if m not in results_over[mesh_type][n]:
-                continue
-            r = results_over[mesh_type][n][m]
-            bf2 = r["bf2_forward_bound"]
-            bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
-            rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
-            max_ratio = float(bf2["max_ratio"])
-            fe_bf2 = r["forward_errors"]["BF2"]
-            within_bound = fe_bf2 <= bound_max
-            print(f"    n={n:2d} m={m:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}  within_bf2_bound={within_bound}")
+            print(f"    n={n:3d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}  within_bf2_bound={within_bound}")
     print()
 
 
-def _print_newton_max_dd_table(results_canonical, results_over):
+def _print_newton_max_dd_table(results):
     newton_orders = ["Newton_inc", "Newton_dec", "Newton_Leja"]
     w = 14
-    print("\nTask 4 (f3 = ℓ_n): Newton divided differences max |coeff| — canonical")
+    print("\nTask 4 (f3 = ℓ_n): Newton divided differences max |coeff|")
     print("-" * 80)
-    for mesh_type in MESH_TYPES:
+    for mesh_type in results:
         print(f"  {mesh_type}:")
-        for n in sorted(results_canonical[mesh_type].keys()):
-            r = results_canonical[mesh_type][n]
+        for n in sorted(results[mesh_type].keys()):
+            r = results[mesh_type][n]
             parts = [f"max_dd_{m}={r['newton_max_dd'][m]:>{w}.10f}" for m in newton_orders]
-            print(f"    n={n:2d}  " + "  ".join(parts))
-    print("\nTask 4 (f3 = ℓ_n): Newton divided differences max |coeff| — over-interpolation (m=n+5)")
-    print("-" * 80)
-    for mesh_type in MESH_TYPES:
-        print(f"  {mesh_type}:")
-        for n in sorted(results_over[mesh_type].keys()):
-            m = n + 5
-            if m not in results_over[mesh_type][n]:
-                continue
-            r = results_over[mesh_type][n][m]
-            parts = [f"max_dd_{meth}={r['newton_max_dd'][meth]:>{w}.10f}" for meth in newton_orders]
-            print(f"    n={n:2d} m={m:2d}  " + "  ".join(parts))
+            print(f"    n={n:3d}  " + "  ".join(parts))
     print()
-
-
-def _plot_n29_higham(results_canonical, output_dir):
-    """Higham-style plots for n=29: log10 error and log10 kappa vs x (uniform and cheb1)."""
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    for mesh_type in ["uniform", "cheb1"]:
-        if mesh_type not in results_canonical or 29 not in results_canonical[mesh_type]:
-            continue
-        r = results_canonical[mesh_type][29]
-        x_eval = r["x_eval"]
-        kappa_1 = r["kappa_1"]
-        kappa_xy = r["kappa_xy"]
-        # Avoid log(0); use small floor
-        eps = 1e-20
-        log_k1 = np.log10(np.maximum(np.abs(kappa_1), eps))
-        log_kxy = np.log10(np.maximum(np.abs(kappa_xy), eps))
-
-        fig, axes = plt.subplots(2, 1, sharex=True, figsize=(8, 6))
-        axes[0].plot(x_eval, log_k1, label=r"$\log_{10} \kappa(x,n,1)$")
-        axes[0].plot(x_eval, log_kxy, label=r"$\log_{10} \kappa(x,n,y)$")
-        axes[0].set_ylabel(r"$\log_{10}$ condition")
-        axes[0].legend()
-        axes[0].grid(True, which="both", linestyle="--", alpha=0.7)
-        # axes[0].set_title(f"Task 4 (f3 = ℓ_n), n=29, {mesh_type}")
-
-        err_bf2 = r["forward_error_vectors"]["BF2"]
-        log_err = np.log10(np.maximum(err_bf2, eps))
-        axes[1].plot(x_eval, log_err, label="BF2")
-        for name in ["Newton_inc", "Newton_dec", "Newton_Leja"]:
-            ev = r["forward_error_vectors"][name]
-            axes[1].plot(x_eval, np.log10(np.maximum(ev, eps)), label=name)
-        axes[1].set_xlabel("x")
-        axes[1].set_ylabel(r"$\log_{10}$ |p_single - p_exact|")
-        axes[1].legend()
-        axes[1].grid(True, which="both", linestyle="--", alpha=0.7)
-        plt.tight_layout()
-        path = os.path.join(output_dir, f"task4_{mesh_type}_n29_higham.png")
-        plt.savefig(path, dpi=150)
-        plt.close()
-        print(f"Saved plot to {path}")
-
-
-def _plot_relative_error_30pt(results_canonical, output_dir):
-    """Relative error vs x (Higham-style) for 30 points: uniform and Chebyshev first kind, one figure."""
-    from utils.plotting import plot_relative_error_30pt_grid
-
-    methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
-    entries = []
-    for mesh_type in ["uniform", "cheb1"]:
-        if mesh_type not in results_canonical or 29 not in results_canonical[mesh_type]:
-            continue
-        r = results_canonical[mesh_type][29]
-        entries.append((
-            r["x_eval"],
-            r["p_exact"],
-            r["forward_error_vectors"],
-            f"Relative error in p_n(x), 30 nodes, {mesh_type} (f3 = ℓ_n)",
-        ))
-    if len(entries) == 2:
-        path = os.path.join(output_dir, "task4_relative_error_30pt.png")
-        plot_relative_error_30pt_grid(entries, methods, path)  # title="Task 4 (f3): relative error vs x, 30 nodes"
-        print(f"Saved plot to {path}")

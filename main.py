@@ -73,6 +73,14 @@ def parse_args():
         metavar="D",
         help="Dimension d for f2 (Task 3): f2(x) = product_{i=1}^d (x - i) (default 9).",
     )
+    p.add_argument(
+        "--f3-degree",
+        type=int,
+        default=9,
+        dest="f3_degree",
+        metavar="N",
+        help="Degree of Lagrange basis polynomial f3 = ℓ_n for Task 4 (default 29).",
+    )
     return p.parse_args()
 
 
