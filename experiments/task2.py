@@ -86,7 +86,7 @@ def _print_table(results):
 def _print_bf2_bound_table(results):
     w = 14
     print("\nf_1: BF2 forward error bound")
-    print("-" * 100)
+    print("-" * 120)
     for mesh_type in results:
         print(f"  {mesh_type}:")
         for n in sorted(results[mesh_type].keys()):
@@ -95,7 +95,9 @@ def _print_bf2_bound_table(results):
             bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
             rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
             max_ratio = float(bf2["max_ratio"])
-            print(f"    n={n:3d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}")
+            fe_bf2 = r["forward_errors"]["BF2"]
+            within_bound = fe_bf2 <= bound_max
+            print(f"    n={n:3d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}  within_bf2_bound={within_bound}")
     print()
 
 

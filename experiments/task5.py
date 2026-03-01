@@ -120,17 +120,19 @@ def _print_part2_stability(results):
     methods = ["BF2", "Newton_inc", "Newton_dec", "Newton_Leja"]
     w = 12
     print("\nTask 5 (f4) Part 2 — Stability / accuracy: forward_errors, BF2 bound, Newton max_dd")
-    print("-" * 90)
+    print("-" * 110)
     for mesh_type in results:
         print(f"  {mesh_type}:")
         for n in sorted(results[mesh_type].keys())[:5]:  # first 5 n
             r = results[mesh_type][n]
             fe_bf2 = r["forward_errors"]["BF2"]
             bf2 = r["bf2_forward_bound"]
+            bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
             max_ratio = float(bf2["max_ratio"])
+            within_bound = fe_bf2 <= bound_max
             dd = r["newton_max_dd"]
             fe_str = "  ".join(f"{m}={r['forward_errors'][m]:{w}.6f}" for m in methods)
-            print(f"    n={n:3d}  {fe_str}  bf2_max_ratio={max_ratio:{w}.6f}  max_dd_Leja={dd['Newton_Leja']:{w}.6f}")
+            print(f"    n={n:3d}  {fe_str}  bf2_max_ratio={max_ratio:{w}.6f}  max_dd_Leja={dd['Newton_Leja']:{w}.6f}  within_bf2_bound={within_bound}")
         if len(results[mesh_type]) > 5:
             print(f"    ... ({len(results[mesh_type])} total n values)")
     print()

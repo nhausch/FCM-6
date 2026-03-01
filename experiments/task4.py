@@ -94,7 +94,7 @@ def _print_table(results_canonical, results_over):
 def _print_bf2_bound_table(results_canonical, results_over):
     w = 14
     print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound — canonical")
-    print("-" * 100)
+    print("-" * 120)
     for mesh_type in MESH_TYPES:
         print(f"  {mesh_type}:")
         for n in sorted(results_canonical[mesh_type].keys()):
@@ -103,9 +103,11 @@ def _print_bf2_bound_table(results_canonical, results_over):
             bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
             rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
             max_ratio = float(bf2["max_ratio"])
-            print(f"    n={n:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}")
+            fe_bf2 = r["forward_errors"]["BF2"]
+            within_bound = fe_bf2 <= bound_max
+            print(f"    n={n:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}  within_bf2_bound={within_bound}")
     print("\nTask 4 (f3 = ℓ_n): BF2 forward error bound — over-interpolation (m=n+5)")
-    print("-" * 100)
+    print("-" * 120)
     for mesh_type in MESH_TYPES:
         print(f"  {mesh_type}:")
         for n in sorted(results_over[mesh_type].keys()):
@@ -117,7 +119,9 @@ def _print_bf2_bound_table(results_canonical, results_over):
             bound_max = np.max(np.atleast_1d(bf2["theoretical_bound"]))
             rel_max = np.max(np.atleast_1d(bf2["relative_error"]))
             max_ratio = float(bf2["max_ratio"])
-            print(f"    n={n:2d} m={m:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}")
+            fe_bf2 = r["forward_errors"]["BF2"]
+            within_bound = fe_bf2 <= bound_max
+            print(f"    n={n:2d} m={m:2d}  bf2_bound_max={bound_max:>{w}.10f}  bf2_rel_max={rel_max:>{w}.10f}  bf2_max_ratio={max_ratio:>{w}.10f}  within_bf2_bound={within_bound}")
     print()
 
 
